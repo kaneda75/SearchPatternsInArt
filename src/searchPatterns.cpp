@@ -14,7 +14,7 @@
 using namespace cv;
 using namespace std;
 
-const string vocabularyImagesNameFile = "/Users/xescriche/git/SearchPattersInArt/tests/test1/vocabularyImages.txt";
+const string vocabularyImagesNameFile = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/vocabularyImages.txt";
 const string newImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/tapies3.jpg";
 const string detectorType = "SIFT";
 const string descriptorType = "SIFT";
