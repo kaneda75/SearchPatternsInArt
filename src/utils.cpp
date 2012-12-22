@@ -7,8 +7,8 @@
 using namespace std;
 using namespace cv;
 
-static void readVocabularyImages(const string& filename, string& dirName, vector<string>& vocabularyFiles) {
-        vocabularyFiles.clear();
+void readVocabularyImages(const string& filename, string& dirName, vector<string>& vocabularyFiles) {
+	vocabularyFiles.clear();
         ifstream file(filename.c_str());
         if (!file.is_open())
             return;
@@ -29,3 +29,19 @@ static void readVocabularyImages(const string& filename, string& dirName, vector
         }
         file.close();
 }
+
+int leerLineaTxt(FILE *ftxt, char * linea) {
+	int error = 0;
+	char c = ' ';
+
+	do {
+		if (fgets(linea, 120, ftxt) == NULL) {
+			error = 1; // ERROR_LECTURA;
+		} else {
+			c = linea[0];
+		};
+	} while ((!feof(ftxt)) && (!error)
+			&& ((c == '.') || (c == ' ') || (c == '\r') || (c == '\n')
+					|| (c == '\0')));
+	return (error);
+} /* f_leerLinea */
