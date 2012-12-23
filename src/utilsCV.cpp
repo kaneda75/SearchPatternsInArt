@@ -45,7 +45,7 @@ bool readImagesFromFile(const string& imagesFilename,vector <Mat>& imagesVector,
 		return false;
 	} else {
 //		numTrainImages = readImageCount;
-		cout << "Number of images from file:                        " << readImageCount << endl;
+//		cout << "Number of images from file:                        " << readImageCount << endl;
 	}
     return true;
 }
@@ -60,17 +60,21 @@ void detectKeypointsImagesVector(const vector<Mat>& imagesVector, vector<vector<
 
 void computeDescriptorsImage(const Mat& image, vector<KeyPoint>& imageKeypointsVector, Mat& imageDescriptors, Ptr<DescriptorExtractor>& descriptorExtractor/*, int & numImageDescriptors*/) {
         descriptorExtractor->compute(image, imageKeypointsVector, imageDescriptors);
-//        numImageDescriptors = imageDescriptors.rows;
-//        cout << "Number of query image descriptors:     " << numImageDescriptors << endl;
 }
 
 void computeDescriptorsImagesVector(const vector<Mat>& imagesVector, vector<vector<KeyPoint> >& imagesVectorKeypointsVector, vector<Mat>& imagesVectorDescriptors,Ptr<DescriptorExtractor>& descriptorExtractor/*, int & numImagesVectorDescriptors*/) {
         descriptorExtractor->compute(imagesVector, imagesVectorKeypointsVector, imagesVectorDescriptors);
-//        int totalTrainDesc = 0;
-//        for (vector<Mat>::const_iterator tdIter = imagesVectorDescriptors.begin(); tdIter != imagesVectorDescriptors.end(); tdIter++)
-//            totalTrainDesc += tdIter->rows;
-//        numImagesVectorDescriptors = totalTrainDesc;
-//        cout << "Number of train images descriptors:     " << totalTrainDesc << endl;
+}
+
+void showKeypoints(const vector<Mat>& vocabularyImages, const vector<vector<KeyPoint> >& vocabularyImagesKeypoints) {
+	for (size_t i = 0; i < vocabularyImages.size(); i++) {
+		Mat img_keypoints;
+		drawKeypoints(vocabularyImages[i], vocabularyImagesKeypoints[i], img_keypoints, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
+		stringstream ss;
+		ss << "Keypoints image " << i + 1;
+		imshow(ss.str(), img_keypoints);
+		waitKey(0);
+	}
 }
 
 
