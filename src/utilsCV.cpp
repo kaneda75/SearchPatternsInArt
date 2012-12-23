@@ -4,10 +4,6 @@
  *  Created on: 18/12/2012
  *      Author: xescriche
  */
-#include <cstdio>
-#include <iostream>
-#include <math.h>
-#include <string.h>
 #include "utilsCV.hpp"
 #include "utils.hpp"
 
@@ -75,6 +71,33 @@ void showKeypoints(const vector<Mat>& vocabularyImages, const vector<vector<KeyP
 		imshow(ss.str(), img_keypoints);
 		waitKey(0);
 	}
+}
+
+void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount, int attempts) {
+	// POINT 2: APPLY KMEANS TO THE vocabularyImagesKeypoints SET
+	int numRowsTotal = 0;
+	for (unsigned int i = 0; i < imagesVectorDescriptors.size(); i++) {
+		numRowsTotal = numRowsTotal + imagesVectorDescriptors[i].rows;
+	}
+
+	Mat src = imagesVectorDescriptors[0];
+	Mat samples(numRowsTotal, src.cols, src.type());
+	int jj = 0;
+	for (unsigned int i = 0; i < imagesVectorDescriptors.size(); i++) {
+		src = imagesVectorDescriptors[i];
+		for (int j = 0; j < src.rows; j++) {
+			for (int x = 0; x < src.cols; x++) {
+				samples.at<float>(jj, x) = src.at<float>(j, x);
+			}
+			cout << "jj: " << jj << endl;
+			jj++;
+		}
+	}
+	Mat labels;
+	Mat centers;
+	kmeans(samples, clusterCount, labels, TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0), attempts, KMEANS_PP_CENTERS, centers);
+	imshow("clustered image after kmeans", samples);
+	waitKey(0);
 }
 
 

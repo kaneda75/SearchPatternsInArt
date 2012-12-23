@@ -7,13 +7,11 @@
 #ifndef UTILSCV_HPP_
 #define UTILSCV_HPP_
 
-#include <cstdio>
-#include <iostream>
-#include <math.h>
-#include <string.h>
 #include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/contrib/contrib.hpp"
+#include "opencv2/core/core.hpp"
 
 using namespace std;
 using namespace cv;
@@ -25,5 +23,6 @@ void computeDescriptorsImagesVector(const vector<Mat>& imagesVector, vector<vect
 void detectKeypointsImage(const Mat& image, vector<KeyPoint>& imageKeypoints, Ptr<FeatureDetector>& featureDetector);
 void detectKeypointsImagesVector(const vector<Mat>& imagesVector, vector<vector<KeyPoint> >& imageKeypointsVector,Ptr<FeatureDetector>& featureDetector);
 void showKeypoints(const vector<Mat>& vocabularyImages, const vector<vector<KeyPoint> >& vocabularyImagesKeypoints);
+void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount, int attempts);
 
 #endif /* UTILSCV_HPP_ */

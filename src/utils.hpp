@@ -5,6 +5,13 @@
 #include <iomanip>
 #include <fstream>
 #include <string.h>
+#include <cstdio>
+#include <math.h>
+#include <string.h>
+#include <vector>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sstream>
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/contrib/contrib.hpp"
