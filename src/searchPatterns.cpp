@@ -1,4 +1,5 @@
 #include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 #include "opencv2/features2d/features2d.hpp"
 #include "opencv2/contrib/contrib.hpp"
 #include "opencv2/core/core.hpp"
@@ -50,10 +51,44 @@ void computeMatching() {
 		detectKeypointsImagesVector(vocabularyImages, vocabularyImagesKeypoints, featureDetector);
 
 		// Show the keypoints on screen
-		showKeypoints(vocabularyImages, vocabularyImagesKeypoints);
+//		showKeypoints(vocabularyImages, vocabularyImagesKeypoints);
+
+	// POINT 2: APPLY KMEANS TO THE vocabularyImagesKeypoints SET
 
 		vector<Mat> imagesVectorDescriptors;
 		computeDescriptorsImagesVector(vocabularyImages, vocabularyImagesKeypoints,imagesVectorDescriptors, descriptorExtractor);
+
+		Mat src = imagesVectorDescriptors[0];
+		if (src!=NULL) {
+			Mat samples(imagesVectorDescriptors.size() * src.rows, src.cols, src.type());
+			for ( unsigned int i = 0; i < imagesVectorDescriptors.size(); i++) {
+				src = imagesVectorDescriptors[i];
+				for (int j = 0; j < src.rows; j++)
+					for( int x = 0; x < src.cols; x++ )
+						samples.at<float>(i+j, x) = src.at<float>(j,x);
+			}
+
+			imshow( "clustered image before kmeans", samples );
+			waitKey( 0 );
+			int clusterCount = 10;
+			Mat labels;
+			int attempts = 5;
+			Mat centers;
+			kmeans(samples, clusterCount, labels, TermCriteria(CV_TERMCRIT_EPS+CV_TERMCRIT_ITER, 10, 1.0), attempts, KMEANS_PP_CENTERS, centers );
+			//		Mat new_image( samples.size(), samples.type() );
+			//		for( int y = 0; y < samples.rows; y++ )
+			//			for( int x = 0; x < samples.cols; x++ )
+			//			{
+			//				int cluster_idx = labels.at<int>(y + x*samples.rows,0);
+			//				new_image.at<Vec3b>(y,x)[0] = centers.at<float>(cluster_idx, 0);
+			//				new_image.at<Vec3b>(y,x)[1] = centers.at<float>(cluster_idx, 1);
+			//				new_image.at<Vec3b>(y,x)[2] = centers.at<float>(cluster_idx, 2);
+			//			}
+			imshow( "clustered image after kmeans", samples );
+			waitKey( 0 );
+		} else {
+			cout << "The imageVectorDescriptors is NULL." << endl;
+		}
 
 
 		// New Image
