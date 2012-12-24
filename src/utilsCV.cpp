@@ -19,7 +19,7 @@ bool readImage(const string& imageName, Mat& image,int color) {
 	return true;
 }
 
-bool readImagesFromFile(const string& imagesFilename,vector <Mat>& imagesVector, vector<string>& imagesVectorNames, int color/*, int & numTrainImages*/) {
+bool readImagesFromFile(const string& imagesFilename,vector <Mat>& imagesVector, vector<string>& imagesVectorNames, int color, int & numImagesTotal) {
 	string trainDirName;
 	readVocabularyImages(imagesFilename, trainDirName, imagesVectorNames);
 	if (imagesVectorNames.empty()) {
@@ -40,7 +40,7 @@ bool readImagesFromFile(const string& imagesFilename,vector <Mat>& imagesVector,
 		cout << "All the file images cannot be read." << endl << ">" << endl;
 		return false;
 	} else {
-//		numTrainImages = readImageCount;
+		numImagesTotal = readImageCount;
 //		cout << "Number of images from file:                        " << readImageCount << endl;
 	}
     return true;
@@ -73,7 +73,7 @@ void showKeypoints(const vector<Mat>& vocabularyImages, const vector<vector<KeyP
 	}
 }
 
-void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount, int attempts) {
+void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount, int attempts,int numImagesTotal, vector<vector<int> >& vocabulary) {
 	// POINT 2: APPLY KMEANS TO THE vocabularyImagesKeypoints SET
 	int numRowsTotal = 0;
 	for (unsigned int i = 0; i < imagesVectorDescriptors.size(); i++) {
@@ -82,22 +82,56 @@ void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clus
 
 	Mat src = imagesVectorDescriptors[0];
 	Mat samples(numRowsTotal, src.cols, src.type());
-	int jj = 0;
-	for (unsigned int i = 0; i < imagesVectorDescriptors.size(); i++) {
+	int jj = 0; //sample, labels index
+	for (int i = 0; i < numImagesTotal; i++) {
 		src = imagesVectorDescriptors[i];
 		for (int j = 0; j < src.rows; j++) {
 			for (int x = 0; x < src.cols; x++) {
 				samples.at<float>(jj, x) = src.at<float>(j, x);
 			}
-			cout << "jj: " << jj << endl;
 			jj++;
 		}
 	}
 	Mat labels;
 	Mat centers;
 	kmeans(samples, clusterCount, labels, TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0), attempts, KMEANS_PP_CENTERS, centers);
-	imshow("clustered image after kmeans", samples);
-	waitKey(0);
+
+	// Show kmeans results
+	cout<<"labels:"<<endl;
+	for(int i = 0; i < labels.rows; ++i)
+		cout<< "i:" << i << " label: " << labels.at<int>(0, i) << endl;
+
+	// First we put all values to 0
+	for(int i = 0; i < clusterCount; ++i) {
+		for (int j = 0; j < numImagesTotal; j++) {
+			vocabulary[i][j]=0;
+		}
+	}
+
+	cout<<"\ncenters:"<<endl;
+
+	// i=> centers index
+	for(int i = 0; i < clusterCount; ++i) {
+		jj=0;
+		cout<< "i: " << i << " centerValue: " << centers.at<float>(0, i) << endl;
+		// x=> image index
+		for (int x = 0; x < numImagesTotal; x++) {
+			src = imagesVectorDescriptors[x];
+			for (int j = 0; j < src.rows; j++) {
+				if (labels.at<int>(0,jj)==i) {  // The image contains a k=i
+					vocabulary[i][x]=1;
+				}
+				jj++;
+			}
+		}
+	}
+
+	// Show vocabulary matrix
+	for(int i = 0; i < clusterCount ; ++i) {
+		for (int j = 0; j < numImagesTotal; j++) {
+			cout<< "Vocabulary i: " << i << " j: " << j << " value: " << vocabulary[i][j] <<endl;
+		}
+	}
 }
 
 

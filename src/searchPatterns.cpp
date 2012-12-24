@@ -8,9 +8,10 @@ using namespace std;
 const string detectorType = "SIFT";
 const string descriptorType = "SIFT";
 const int color = 0;
+int numImagesTotal = 0;
 
 // K-means
-const int clusterCount = 4;
+const int clusterCount = 60;  // K const in k-means. This must be <= Total number of rows in the sum of all vocabulary images.
 const int attempts = 3;
 
 // Directories, files
@@ -40,7 +41,7 @@ void computeMatching() {
 		// Vocabulary images
 		vector<Mat> vocabularyImages;
 		vector<string> vocabularyImagesNames;
-		if (!readImagesFromFile(vocabularyImagesNameFile, vocabularyImages,vocabularyImagesNames, color)) {
+		if (!readImagesFromFile(vocabularyImagesNameFile, vocabularyImages,vocabularyImagesNames, color, numImagesTotal)) {
 			cout << endl;
 		}
 
@@ -55,7 +56,8 @@ void computeMatching() {
 
 	// POINT 2: APPLY KMEANS TO THE vocabularyImagesKeypoints SET
 
-		kmeansVocabularyImages(imagesVectorDescriptors, clusterCount, attempts);
+		vector<vector<int> > vocabulary(clusterCount, vector<int>(numImagesTotal));
+		kmeansVocabularyImages(imagesVectorDescriptors, clusterCount, attempts, numImagesTotal, vocabulary);
 
 		// New Image
 //		Mat newImage;
