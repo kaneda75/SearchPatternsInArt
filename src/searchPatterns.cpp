@@ -11,7 +11,7 @@ const int color = 0;
 int numImagesTotal = 0;
 
 // K-means
-const int clusterCount = 60;  // K const in k-means. This must be <= Total number of rows in the sum of all vocabulary images.
+const int clusterCount = 4;  // K const in k-means. This must be <= Total number of rows in the sum of all vocabulary images.
 const int attempts = 3;
 
 // Directories, files
@@ -57,19 +57,27 @@ void computeMatching() {
 	// POINT 2: APPLY KMEANS TO THE vocabularyImagesKeypoints SET
 
 		vector<vector<int> > vocabulary(clusterCount, vector<int>(numImagesTotal));
-		kmeansVocabularyImages(imagesVectorDescriptors, clusterCount, attempts, numImagesTotal, vocabulary);
+		Mat samples = kmeansVocabularyImages(imagesVectorDescriptors, clusterCount, attempts, numImagesTotal, vocabulary);
 
-		// New Image
-//		Mat newImage;
-//		if (!readImage(newImageFileName,newImage,color)) {
-//			cout << endl;
-//		}
-//
-//		vector<KeyPoint> queryKeypoints;
-//		detectKeypoints(newImage, queryKeypoints, vocabularyImages,trainKeypoints, featureDetector);
-//
-//		Mat queryDescriptors;
-//		computeDescriptors(newImage, vocabularyImagesKeypoints,queryDescriptors, vocabularyImages, trainKeypoints,trainDescriptors, descriptorExtractor,numQueryDescriptors, numTrainDescriptors);
+    // POINT 3: NEW IMAGE
+
+		Mat newImage;
+		if (!readImage(newImageFileName,newImage,color)) {
+			cout << endl;
+		}
+
+		// 3.1 SIFT on NEW IMAGE
+		vector<KeyPoint> newImageKeypoints;
+		detectKeypointsImage(newImage, newImageKeypoints, featureDetector);
+
+		// Show the keypoints on screen
+//		showKeypointsImage(newImage, newImageKeypoints);
+
+		Mat newImageDescriptors;
+		computeDescriptorsImage(newImage, newImageKeypoints, newImageDescriptors, descriptorExtractor);
+
+		// 3.2 KMEANS on NEW IMAGE
+//		kmeansNewImage(samples,newImageDescriptors, clusterCount, attempts);
 
 	} catch (exception& e) {
 		cout << e.what() << endl;
