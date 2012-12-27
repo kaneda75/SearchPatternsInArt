@@ -220,7 +220,7 @@ void findKCentersOnNewImage(Mat& matCenters, Mat& newImageDescriptors, int clust
 	}
 }
 
-void votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImagesTotal) {
+int votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImagesTotal) {
 
 	Mat matVote(numImagesTotal, 1, matCenters.type());
 	// initialize matVote to 0
@@ -237,4 +237,16 @@ void votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImage
 		}
 	}
 	showMatrixValues2(matVote, "matVote:");
+
+	// Calcule the most voted image
+	int mostVotedImage = 0;
+	int mostVotedImageValue = 0;
+	for (int var = 0; var < matVote.rows; ++var) {
+		if (matVote.at<int>(var,0) > mostVotedImageValue) {
+			mostVotedImage = var;
+			mostVotedImageValue = matVote.at<int>(var,0);
+		}
+	}
+	cout << "Most voted image: " << mostVotedImage << " with " << mostVotedImageValue << " votes." << endl;
+	return mostVotedImage;
 }

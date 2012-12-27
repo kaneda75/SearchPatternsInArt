@@ -79,8 +79,8 @@ void computeMatching() {
 		Mat matCenters(newImageDescriptors.rows, 1, centers.type());
 		findKCentersOnNewImage(matCenters, newImageDescriptors, clusterCount, attempts, labels, centers);
 
-	// POINT 3.3: Voting
-		votingImages(vocabulary,matCenters,numImagesTotal);
+	// POINT 3.3: Voting images
+		int mostVotedImage = votingImages(vocabulary,matCenters,numImagesTotal);
 
 
 	} catch (exception& e) {

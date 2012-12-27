@@ -26,7 +26,7 @@ void showKeypoints(const vector<Mat>& vocabularyImages, const vector<vector<KeyP
 void showKeypointsImage(const Mat& image, const vector<KeyPoint> & imageKeypoints);
 void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount, int attempts,int numImagesTotal, vector<vector<int> >& vocabulary, Mat& labels, Mat& centers);
 void findKCentersOnNewImage(Mat& matCenters, Mat& newImageDescriptors, int clusterCount, int attempts, Mat& labels, Mat& centers);
-void votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImagesTotal);
+int votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImagesTotal);
 
 
 #endif /* UTILSCV_HPP_ */
