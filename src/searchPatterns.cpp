@@ -57,7 +57,9 @@ void computeMatching() {
 	// POINT 2: APPLY KMEANS TO THE vocabularyImagesKeypoints SET
 
 		vector<vector<int> > vocabulary(clusterCount, vector<int>(numImagesTotal));
-		Mat samples = kmeansVocabularyImages(imagesVectorDescriptors, clusterCount, attempts, numImagesTotal, vocabulary);
+		Mat labels;
+		Mat centers;
+		kmeansVocabularyImages(imagesVectorDescriptors, clusterCount, attempts, numImagesTotal, vocabulary, labels, centers);
 
     // POINT 3: NEW IMAGE
 
@@ -77,7 +79,7 @@ void computeMatching() {
 		computeDescriptorsImage(newImage, newImageKeypoints, newImageDescriptors, descriptorExtractor);
 
 		// 3.2 KMEANS on NEW IMAGE
-//		kmeansNewImage(samples,newImageDescriptors, clusterCount, attempts);
+		kmeansNewImage(vocabulary,newImageDescriptors, clusterCount, attempts, labels, centers);
 
 	} catch (exception& e) {
 		cout << e.what() << endl;

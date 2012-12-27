@@ -24,7 +24,7 @@ void detectKeypointsImage(const Mat& image, vector<KeyPoint>& imageKeypoints, Pt
 void detectKeypointsImagesVector(const vector<Mat>& imagesVector, vector<vector<KeyPoint> >& imageKeypointsVector,Ptr<FeatureDetector>& featureDetector);
 void showKeypoints(const vector<Mat>& vocabularyImages, const vector<vector<KeyPoint> >& vocabularyImagesKeypoints);
 void showKeypointsImage(const Mat& image, const vector<KeyPoint> & imageKeypoints);
-Mat kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount, int attempts,int numImagesTotal,vector<vector<int> >& vocabulary);
-void kmeansNewImage(const Mat& samples, Mat& newImageDescriptors, int clusterCount, int attempts);
+void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount, int attempts,int numImagesTotal, vector<vector<int> >& vocabulary, Mat& labels, Mat& centers);
+void kmeansNewImage(vector<vector<int> >& vocabulary, Mat& newImageDescriptors, int clusterCount, int attempts, Mat& labels, Mat& centers);
 
 #endif /* UTILSCV_HPP_ */

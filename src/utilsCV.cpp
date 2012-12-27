@@ -85,11 +85,11 @@ void showKeypointsImage(const Mat& image, const vector<KeyPoint> & imageKeypoint
 Mat extractSamplesMap(const vector<Mat>& imagesVectorDescriptors, int numRowsTotal, int numImagesTotal) {
 	Mat src = imagesVectorDescriptors[0];
 	Mat samples(numRowsTotal, src.cols, src.type());
-	int jj = 0; //sample, labels index
-	for (int i = 0; i < numImagesTotal; i++) {
+	int jj = 0;
+	for (int i = 0; i < numImagesTotal; i++) { // i IMAGE NUMBER
 		src = imagesVectorDescriptors[i];
-		for (int j = 0; j < src.rows; j++) {
-			for (int x = 0; x < src.cols; x++) {
+		for (int j = 0; j < src.rows; j++) { // j ROWS
+			for (int x = 0; x < src.cols; x++) { // x COLS
 				samples.at<float>(jj, x) = src.at<float>(j, x);
 			}
 			jj++;
@@ -121,6 +121,17 @@ int calculeNumRowsTotal(const vector<Mat>& imagesVectorDescriptors) {
 	return numRowsTotal;
 }
 
+void showVocabulary(int clusterCount, int numImagesTotal,
+		vector<vector<int> >& vocabulary) {
+	// Show vocabulary matrix
+	for (int i = 0; i < clusterCount; ++i) {
+		for (int j = 0; j < numImagesTotal; j++) {
+			cout << "Vocabulary i: " << i << " j: " << j << " value: "
+					<< vocabulary[i][j] << endl;
+		}
+	}
+}
+
 void extractVocabulary(int clusterCount, int numImagesTotal, Mat centers,
 		Mat src, const vector<Mat>& imagesVectorDescriptors, Mat labels,
 		vector<vector<int> >& vocabulary) {
@@ -130,7 +141,7 @@ void extractVocabulary(int clusterCount, int numImagesTotal, Mat centers,
 			vocabulary[i][j] = 0;
 		}
 	}
-	cout << "\n" << "Centers:" << endl;
+//	cout << "\n" << "Centers:" << endl;
 	// i=> centers index
 	for (int i = 0; i < clusterCount; ++i) {
 		int jj = 0;
@@ -146,12 +157,7 @@ void extractVocabulary(int clusterCount, int numImagesTotal, Mat centers,
 			}
 		}
 	}
-	// Show vocabulary matrix
-	for (int i = 0; i < clusterCount; ++i) {
-		for (int j = 0; j < numImagesTotal; j++) {
-			cout << "Vocabulary i: " << i << " j: " << j << " value: " << vocabulary[i][j] << endl;
-		}
-	}
+//	showVocabulary(clusterCount, numImagesTotal, vocabulary);
 }
 
 void showMatrixValues(Mat& matrix, string s) {
@@ -160,30 +166,57 @@ void showMatrixValues(Mat& matrix, string s) {
 		cout << "i:" << i << " value: " << matrix.at<int>(0, i) << endl;
 }
 
+void showMatrixValues2(Mat& matrix, string s) {
+	cout << endl << s << endl;
+	for (int i = 0; i < matrix.rows; ++i) {
+//		cout << "ROW " << i << endl;
+		stringstream ss;
+		for (int j = 0; j < matrix.cols; ++j) {
+			ss << matrix.at<int>(i, j) << ";";
+		}
+		cout << ss.str() << endl;
+	}
+}
+
 // POINT 2: APPLY KMEANS TO THE vocabularyImagesKeypoints SET
-Mat kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount, int attempts,int numImagesTotal, vector<vector<int> >& vocabulary) {
-	Mat labels;
-	Mat centers;
+void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount, int attempts,int numImagesTotal, vector<vector<int> >& vocabulary, Mat& labels, Mat& centers) {
 	Mat src = imagesVectorDescriptors[0];
 	int numRowsTotal = calculeNumRowsTotal(imagesVectorDescriptors);
 	Mat samples = extractSamplesMap(imagesVectorDescriptors, numRowsTotal, numImagesTotal);
-	kmeans(samples, clusterCount, labels, TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0), attempts, KMEANS_PP_CENTERS, centers);
-	showMatrixValues(labels, "labels:");
-	showMatrixValues(centers, "centers:");
+	kmeans(samples, clusterCount, labels, TermCriteria(CV_TERMCRIT_ITER, 10, 1.0), attempts, KMEANS_PP_CENTERS, centers);
+//	showMatrixValues2(labels, "labels:");
+//	showMatrixValues2(samples, "samples:");
+	showMatrixValues2(centers, "centers:");
 	extractVocabulary(clusterCount, numImagesTotal, centers, src, imagesVectorDescriptors, labels, vocabulary);
-	return samples;
 }
 
 
 // POINT 3.2: APPLY KMEANS TO THE NEW IMAGE
-void kmeansNewImage(const Mat& samples, Mat& newImageDescriptors, int clusterCount, int attempts) {
-	Mat labels;
-	Mat centers;
-	Mat samples2;
-	for (int var = 0; var < newImageDescriptors.rows; ++var) {
-		samples2 = addDescriptorToSamplesMap(samples,newImageDescriptors.row(var));
-		kmeans(samples2, clusterCount, labels, TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 10, 1.0), attempts, KMEANS_PP_CENTERS, centers);
-		showMatrixValues(labels, "New labels:");
-		showMatrixValues(centers,"New Image centers:");
+void kmeansNewImage(vector<vector<int> >& vocabulary, Mat& newImageDescriptors, int clusterCount, int attempts, Mat& labels, Mat& centers) {
+	Mat matCenters(newImageDescriptors.rows, 1, centers.type());
+	for (int var = 0; var < newImageDescriptors.rows; ++var) {  //For each descriptor's new image
+		Mat descriptor = newImageDescriptors.row(var);
+		Mat matDifference(centers.rows, 1, centers.type());
+		for (int i = 0; i < centers.rows; ++i) {  // For each k center
+			float sumTotal = 0;
+			Mat src = centers.row(i);
+			for (int j = 0; j < src.cols; ++j) {  // Comparing values
+				float diference = abs(src.at<float>(0, j) - descriptor.at<float>(0, j));
+				sumTotal = sumTotal + diference;
+			}
+			matDifference.at<float>(i,0) = sumTotal;
+		}
+
+		float value = matDifference.at<float>(0,0);
+		int position = 0;
+		for (int x = 1; x < matDifference.rows; ++x) {
+			if (matDifference.at<float>(x,0) < value) {
+				value = matDifference.at<float>(x,0);
+				position = x;
+			}
+		}
+		matCenters.at<float>(var, 0) = position;
+		showMatrixValues2(descriptor, "descriptor:");
+		cout << "New Image Row: " << var << " KCenter: " << position << endl;
 	}
 }
