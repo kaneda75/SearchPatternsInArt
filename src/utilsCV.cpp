@@ -178,7 +178,7 @@ void showMatrixValues2(Mat& matrix, string s) {
 	}
 }
 
-// POINT 2: APPLY KMEANS TO THE vocabularyImagesKeypoints SET
+// POINT 2: APPLY KMEANS ON imagesVectorDescriptors
 void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount, int attempts,int numImagesTotal, vector<vector<int> >& vocabulary, Mat& labels, Mat& centers) {
 	Mat src = imagesVectorDescriptors[0];
 	int numRowsTotal = calculeNumRowsTotal(imagesVectorDescriptors);
@@ -191,9 +191,8 @@ void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clus
 }
 
 
-// POINT 3.2: APPLY KMEANS TO THE NEW IMAGE
-void kmeansNewImage(vector<vector<int> >& vocabulary, Mat& newImageDescriptors, int clusterCount, int attempts, Mat& labels, Mat& centers) {
-	Mat matCenters(newImageDescriptors.rows, 1, centers.type());
+// POINT 3.2: Find KCenters on newImageDescriptors
+void findKCentersOnNewImage(Mat& matCenters, Mat& newImageDescriptors, int clusterCount, int attempts, Mat& labels, Mat& centers) {
 	for (int var = 0; var < newImageDescriptors.rows; ++var) {  //For each descriptor's new image
 		Mat descriptor = newImageDescriptors.row(var);
 		Mat matDifference(centers.rows, 1, centers.type());
@@ -215,8 +214,27 @@ void kmeansNewImage(vector<vector<int> >& vocabulary, Mat& newImageDescriptors, 
 				position = x;
 			}
 		}
-		matCenters.at<float>(var, 0) = position;
+		matCenters.at<int>(var, 0) = position;
 		showMatrixValues2(descriptor, "descriptor:");
 		cout << "New Image Row: " << var << " KCenter: " << position << endl;
 	}
+}
+
+void votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImagesTotal) {
+
+	Mat matVote(numImagesTotal, 1, matCenters.type());
+	// initialize matVote to 0
+	for (int i = 0; i < matVote.rows; ++i) {
+		matVote.at<int>(i,0)=0;
+	}
+
+	for (int i = 0; i < matCenters.rows; ++i) {  // For each matCenters row
+		int k = matCenters.at<int>(i,0);  // Get the kCenter value
+		for (int j = 0; j < numImagesTotal; ++j) {
+			if (vocabulary[k][j] == 1) {  // If the vocabulary
+				matVote.at<int>(j,0) = matVote.at<int>(j,0) + 1;
+			}
+		}
+	}
+	showMatrixValues2(matVote, "matVote:");
 }
