@@ -54,21 +54,12 @@ std::vector<Point2f> getCorners(const Mat& imageSelected) {
 	return obj_corners;
 }
 
-void drawImageLines(const std::vector<Point2f>& scene_corners,
-		Mat imageSelected, Mat& img_matches) {
+void drawImageLines(const std::vector<Point2f>& scene_corners,Mat imageSelected, Mat& img_matches) {
 	//-- Draw lines between the corners (the mapped object in the scene - image_2 )
-	line(img_matches, scene_corners[0] + Point2f(imageSelected.cols, 0),
-			scene_corners[1] + Point2f(imageSelected.cols, 0),
-			Scalar(0, 255, 0), 4);
-	line(img_matches, scene_corners[1] + Point2f(imageSelected.cols, 0),
-			scene_corners[2] + Point2f(imageSelected.cols, 0),
-			Scalar(0, 255, 0), 4);
-	line(img_matches, scene_corners[2] + Point2f(imageSelected.cols, 0),
-			scene_corners[3] + Point2f(imageSelected.cols, 0),
-			Scalar(0, 255, 0), 4);
-	line(img_matches, scene_corners[3] + Point2f(imageSelected.cols, 0),
-			scene_corners[0] + Point2f(imageSelected.cols, 0),
-			Scalar(0, 255, 0), 4);
+	line(img_matches, scene_corners[0] + Point2f(imageSelected.cols, 0),scene_corners[1] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
+	line(img_matches, scene_corners[1] + Point2f(imageSelected.cols, 0),scene_corners[2] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
+	line(img_matches, scene_corners[2] + Point2f(imageSelected.cols, 0),scene_corners[3] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
+	line(img_matches, scene_corners[3] + Point2f(imageSelected.cols, 0),scene_corners[0] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
 }
 
 void getKeypointsFromGoodMatches(const std::vector<DMatch>& good_matches,
@@ -114,6 +105,46 @@ void ransacEX1(const Mat& imageSelectedDescriptors,const Mat& newImageDescriptor
 
 	// Show detected matches
 	imshow("Good Matches & Object detection", img_matches);
+	waitKey(0);
+}
+
+
+void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints) {
+	std::vector<Point2f> obj;
+	std::vector<Point2f> scene;
+
+	int wordIni;
+	for (int i = 0; i < wordsImageIni.rows; ++i) {
+		wordIni = wordsImageIni.at<int>(i,0);
+		for (int j = 0; j < wordsNewImage.rows; ++j) {
+			if (wordIni==wordsNewImage.at<int>(j,0)) {
+				obj.push_back(imageIniKeypoints[i].pt);
+				scene.push_back(newImageKeypoints[j].pt);
+			}
+		}
+	}
+
+	// Find Homography
+	Mat H = findHomography(obj, scene, CV_RANSAC);
+
+	// Get the corners from the image_1 ( the object to be "detected" )
+	std::vector<Point2f> obj_corners = getCorners(imageIni);
+
+	// Transform perspective
+	std::vector<Point2f> scene_corners(4);
+	perspectiveTransform(obj_corners, scene_corners, H);
+
+	// Draw lines between the corners (the mapped object in the scene - image_2 )
+
+	Mat imageResult;
+	std::vector<DMatch> good_matches;
+	drawMatches(imageIni, imageIniKeypoints, newImage,newImageKeypoints, good_matches, imageResult, Scalar::all(-1),Scalar::all(-1), vector<char>(),DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);	drawImageLines(scene_corners, imageIni, imageResult);
+
+	// Draw lines between the corners (the mapped object in the scene - image_2 )
+	drawImageLines(scene_corners, newImage, imageResult);
+
+	// Show detected matches
+	imshow("Good Matches & Object detection", imageResult);
 	waitKey(0);
 }
 
@@ -172,24 +203,29 @@ void computeMatching() {
 		Mat newImageDescriptors;
 		computeDescriptorsImage(newImage, newImageKeypoints, newImageDescriptors, descriptorExtractor);
 
-	//  POINT 3.2: Find KCenters on newImageDescriptors
+	//  POINT 3.2: Find Words/KCenters on newImageDescriptors
 
-		Mat matCenters(newImageDescriptors.rows, 1, centers.type());
-		findKCentersOnNewImage(matCenters, newImageDescriptors, clusterCount, attempts, labels, centers);
+		Mat wordsNewImage(newImageDescriptors.rows, 1, centers.type());
+		findKCentersOnNewImage(wordsNewImage, newImageDescriptors, clusterCount, attempts, labels, centers);
 
 	// POINT 3.3: Voting images
-		int mostVotedImage = votingImages(vocabulary,matCenters,numImagesTotal);
-		Mat imageSelected = vocabularyImages[mostVotedImage];
-		vector<KeyPoint> imageSelectedKeypoints = vocabularyImagesKeypoints[mostVotedImage];
-		Mat imageSelectedDescriptors = imagesVectorDescriptors[mostVotedImage];
+
+		int mostVotedImage = votingImages(vocabulary,wordsNewImage,numImagesTotal);
 
 	// POINT 4.1: RANSAC
 
-		ransacEX1(imageSelectedDescriptors, newImageDescriptors, imageSelected, imageSelectedKeypoints, newImage, newImageKeypoints);
+//		ransacEX1(imageSelectedDescriptors, newImageDescriptors, imageSelected, imageSelectedKeypoints, newImage, newImageKeypoints);
 
-//		Mat matCentersIni(imageSelectedDescriptors.rows, 1, centers.type());
-//		findKCentersOnNewImage(matCentersIni, imageSelectedDescriptors, clusterCount, attempts, labels, centers);
-//		ransacEX1(matCentersIni, matCenters, imageSelected, imageSelectedKeypoints, newImage, newImageKeypoints);
+	// Find Words/KCenters on imageSelectedDescriptors
+
+		Mat imageSelected = vocabularyImages[mostVotedImage];
+		vector<KeyPoint> imageSelectedKeypoints = vocabularyImagesKeypoints[mostVotedImage];
+		Mat imageSelectedDescriptors = imagesVectorDescriptors[mostVotedImage];
+		Mat wordsImageIni(imageSelectedDescriptors.rows, 1, centers.type());
+		findKCentersOnNewImage(wordsImageIni, imageSelectedDescriptors, clusterCount, attempts, labels, centers);
+		showMatrixValues3(imageSelectedKeypoints,wordsImageIni, "wordsImageIni:");
+		showMatrixValues3(newImageKeypoints, wordsNewImage, "wordsNewImage:");
+		ransac(wordsImageIni, wordsNewImage, imageSelected, imageSelectedKeypoints, newImage, newImageKeypoints);
 
 
    } catch (exception& e) {

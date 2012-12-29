@@ -28,6 +28,8 @@ void showKeypointsImage(const Mat& image, const vector<KeyPoint> & imageKeypoint
 void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount, int attempts,int numImagesTotal, vector<vector<int> >& vocabulary, Mat& labels, Mat& centers);
 void findKCentersOnNewImage(Mat& matCenters, Mat& newImageDescriptors, int clusterCount, int attempts, Mat& labels, Mat& centers);
 int votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImagesTotal);
+void showMatrixValues2(Mat& matrix, string s);
+void showMatrixValues3(vector<KeyPoint> keypoints, Mat& matrix,  string s);
 
 
 #endif /* UTILSCV_HPP_ */
