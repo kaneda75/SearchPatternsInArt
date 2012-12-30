@@ -162,3 +162,74 @@
 //            }
 //        }
 //}
+//
+//void getKeypointsFromGoodMatches(const std::vector<DMatch>& good_matches,
+//		const vector<KeyPoint>& imageSelectedKeypoints,
+//		const vector<KeyPoint>& newImageKeypoints, std::vector<Point2f>& obj,
+//		std::vector<Point2f>& scene) {
+//	for (unsigned int i = 0; i < good_matches.size(); i++) {
+//		obj.push_back(imageSelectedKeypoints[good_matches[i].queryIdx].pt);
+//		scene.push_back(newImageKeypoints[good_matches[i].trainIdx].pt);
+//	}
+//}
+//
+//std::vector<DMatch> performeBestMatches(const Mat& imageSelectedDescriptors,
+//		const std::vector<DMatch>& matches) {
+//	double max_dist = 0;
+//	double min_dist = 100;
+//	//-- Quick calculation of max and min distances between keypoints
+//	for (int i = 0; i < imageSelectedDescriptors.rows; i++) {
+//		double dist = matches[i].distance;
+//		if (dist < min_dist)
+//			min_dist = dist;
+//
+//		if (dist > max_dist)
+//			max_dist = dist;
+//	}
+//	printf("-- Max dist : %f \n", max_dist);
+//	printf("-- Min dist : %f \n", min_dist);
+//	//-- Draw only "good" matches (i.e. whose distance is less than 3*min_dist )
+//	std::vector<DMatch> good_matches;
+//	for (int i = 0; i < imageSelectedDescriptors.rows; i++) {
+//		if (matches[i].distance < 3 * min_dist) {
+//			good_matches.push_back(matches[i]);
+//		}
+//	}
+//	return good_matches;
+//}
+//
+//void ransacEX1(const Mat& imageSelectedDescriptors,const Mat& newImageDescriptors, Mat imageSelected,const vector<KeyPoint>& imageSelectedKeypoints, const Mat& newImage,const vector<KeyPoint>& newImageKeypoints) {
+//
+//	// Matching descriptor vectors using FLANN matcher
+//	FlannBasedMatcher matcher;
+//	std::vector<DMatch> matches;
+//	matcher.match(imageSelectedDescriptors, newImageDescriptors, matches);
+//	std::vector<DMatch> good_matches = performeBestMatches(imageSelectedDescriptors, matches);
+//
+//	Mat img_matches;
+//	drawMatches(imageSelected, imageSelectedKeypoints, newImage,newImageKeypoints, good_matches, img_matches, Scalar::all(-1),Scalar::all(-1), vector<char>(),DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+//	imshow("Good Matches & Object detection", img_matches);
+//	waitKey(0);
+//
+//	//Get the keypoints from the good matches
+//	std::vector<Point2f> obj;
+//	std::vector<Point2f> scene;
+//	getKeypointsFromGoodMatches(good_matches, imageSelectedKeypoints, newImageKeypoints, obj, scene);
+//
+//	// Find Homography
+//	Mat H = findHomography(obj, scene, CV_RANSAC);
+//
+//	// Get the corners from the image_1 ( the object to be "detected" )
+//	std::vector<Point2f> obj_corners = getCorners(imageSelected);
+//
+//	// Transform perspective
+//	std::vector<Point2f> scene_corners(4);
+//	perspectiveTransform(obj_corners, scene_corners, H);
+//
+//	// Draw lines between the corners (the mapped object in the scene - image_2 )
+//	drawImageLines(scene_corners, imageSelected, img_matches);
+//
+//	// Show detected matches
+//	imshow("Good Matches & Object detection", img_matches);
+//	waitKey(0);
+//}
