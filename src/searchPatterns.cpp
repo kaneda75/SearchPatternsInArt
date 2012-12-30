@@ -11,13 +11,13 @@ const int color = 0;
 int numImagesTotal = 0;
 
 // K-means
-const int clusterCount = 60;  // K const in k-means. This must be <= Total number of rows in the sum of all vocabulary images.
+const int clusterCount = 282;  // K const in k-means. This must be <= Total number of rows in the sum of all vocabulary images.
 const int attempts = 3;
 
 // Directories, files
-const string vocabularyImagesNameFile = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/vocabularyImages.txt";
-const string newImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/tapies1.jpg";
-const string dirToSaveResImages = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/results";
+const string vocabularyImagesNameFile = "/Users/xescriche/git/SearchPatternsInArt/tests/test2/vocabularyImages.txt";
+const string newImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/test2/tapies9.jpg";
+const string dirToSaveResImages = "/Users/xescriche/git/SearchPatternsInArt/tests/test2/results";
 
 void computeMatching() {
 	try {
@@ -47,7 +47,7 @@ void computeMatching() {
 		detectKeypointsImagesVector(vocabularyImages, vocabularyImagesKeypoints, featureDetector);
 
 		// Show the keypoints on screen
-		// showKeypoints(vocabularyImages, vocabularyImagesKeypoints);
+//		 showKeypointsImagesVector(vocabularyImages, vocabularyImagesKeypoints);
 
 		vector<Mat> imagesVectorDescriptors;
 		computeDescriptorsImagesVector(vocabularyImages, vocabularyImagesKeypoints,imagesVectorDescriptors, descriptorExtractor);
@@ -59,7 +59,7 @@ void computeMatching() {
 		Mat centers;
 		kmeansVocabularyImages(imagesVectorDescriptors, clusterCount, attempts, numImagesTotal, vocabulary, labels, centers);
 
-    // POINT 3.1: READ IMAGE, DETECT KEYPOINTS AND EXTRACT DESCRIPTORS ON "NEW IMAGE"
+	// POINT 3.1: READ IMAGE, DETECT KEYPOINTS AND EXTRACT DESCRIPTORS ON "NEW IMAGE"
 
 		Mat newImage;
 		if (!readImage(newImageFileName,newImage,color))
@@ -92,8 +92,10 @@ void computeMatching() {
 
 		findKCentersOnNewImage(wordsImageIni, imageSelectedDescriptors, clusterCount, attempts, labels, centers);
 
-		showMatrixValues3(imageSelectedKeypoints,wordsImageIni, "wordsImageIni:");
-		showMatrixValues3(newImageKeypoints, wordsNewImage, "wordsNewImage:");
+//		showMatrixValues3(imageSelectedKeypoints,wordsImageIni, "wordsImageIni:");
+//		showMatrixValues3(newImageKeypoints, wordsNewImage, "wordsNewImage:");
+//		showKeypointsImage(imageSelected, imageSelectedKeypoints);
+//		showKeypointsImage(newImage, newImageKeypoints);
 
 		ransac(wordsImageIni, wordsNewImage, imageSelected, imageSelectedKeypoints, newImage, newImageKeypoints);
 

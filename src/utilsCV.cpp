@@ -62,7 +62,7 @@ void computeDescriptorsImagesVector(const vector<Mat>& imagesVector, vector<vect
         descriptorExtractor->compute(imagesVector, imagesVectorKeypointsVector, imagesVectorDescriptors);
 }
 
-void showKeypoints(const vector<Mat>& vocabularyImages, const vector<vector<KeyPoint> >& vocabularyImagesKeypoints) {
+void showKeypointsImagesVector(const vector<Mat>& vocabularyImages, const vector<vector<KeyPoint> >& vocabularyImagesKeypoints) {
 	for (size_t i = 0; i < vocabularyImages.size(); i++) {
 		Mat img_keypoints;
 		drawKeypoints(vocabularyImages[i], vocabularyImagesKeypoints[i], img_keypoints, Scalar::all(-1), DrawMatchesFlags::DEFAULT);
@@ -192,6 +192,7 @@ void showMatrixValues3(vector<KeyPoint> keypoints, Mat& matrix,  string s) {
 void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount, int attempts,int numImagesTotal, vector<vector<int> >& vocabulary, Mat& labels, Mat& centers) {
 	Mat src = imagesVectorDescriptors[0];
 	int numRowsTotal = calculeNumRowsTotal(imagesVectorDescriptors);
+	cout << "numRowsTotal: " << numRowsTotal << endl;
 	Mat samples = extractSamplesMap(imagesVectorDescriptors, numRowsTotal, numImagesTotal);
 	kmeans(samples, clusterCount, labels, TermCriteria(CV_TERMCRIT_ITER, 10, 1.0), attempts, KMEANS_PP_CENTERS, centers);
 //	showMatrixValues2(labels, "labels:");
@@ -261,57 +262,72 @@ int votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImages
 	return mostVotedImage;
 }
 
-// Get the corners from the image_1 ( the object to be "detected" )
+// Get the corners from the imageSelected ( the object to be "detected" )
 vector<Point2f> getCorners(const Mat& imageSelected) {
-	std::vector<Point2f> obj_corners(4);
+	vector<Point2f> obj_corners(4);
+
 	obj_corners[0] = cvPoint(0, 0);
 	obj_corners[1] = cvPoint(imageSelected.cols, 0);
 	obj_corners[2] = cvPoint(imageSelected.cols, imageSelected.rows);
 	obj_corners[3] = cvPoint(0, imageSelected.rows);
+
 	return obj_corners;
 }
 
 // Draw lines between the corners (the mapped object in the scene - image_2 )
-void drawImageLines(const vector<Point2f>& scene_corners,Mat imageSelected, Mat& img_matches) {
-	line(img_matches, scene_corners[0] + Point2f(imageSelected.cols, 0),scene_corners[1] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
-	line(img_matches, scene_corners[1] + Point2f(imageSelected.cols, 0),scene_corners[2] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
-	line(img_matches, scene_corners[2] + Point2f(imageSelected.cols, 0),scene_corners[3] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
-	line(img_matches, scene_corners[3] + Point2f(imageSelected.cols, 0),scene_corners[0] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
+void drawImageLines(const vector<Point2f>& scene_corners,Mat imageSelected, Mat& imgResult) {
+	line(imgResult, scene_corners[0] + Point2f(imageSelected.cols, 0),scene_corners[1] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
+	line(imgResult, scene_corners[1] + Point2f(imageSelected.cols, 0),scene_corners[2] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
+	line(imgResult, scene_corners[2] + Point2f(imageSelected.cols, 0),scene_corners[3] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
+	line(imgResult, scene_corners[3] + Point2f(imageSelected.cols, 0),scene_corners[0] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
+}
+
+void getPointsVectors(const Mat& wordsImageIni, const Mat& wordsNewImage,const vector<KeyPoint>& imageIniKeypoints,const vector<KeyPoint>& newImageKeypoints, vector<Point2f>& obj, vector<Point2f>& scene) {
+	int wordIni;
+	for (int i = 0; i < wordsImageIni.rows; ++i) {
+		wordIni = wordsImageIni.at<int>(i, 0);
+		for (int j = 0; j < wordsNewImage.rows; ++j) {
+			if (wordIni == wordsNewImage.at<int>(j, 0)) {
+				obj.push_back(imageIniKeypoints[i].pt);
+				scene.push_back(newImageKeypoints[j].pt);
+				cout << "Word: " << wordIni << " I1(X,Y): ("
+						<< imageIniKeypoints[i].pt.x << ","
+						<< imageIniKeypoints[i].pt.y << ") I2(X,Y): ("
+						<< newImageKeypoints[j].pt.x << ","
+						<< newImageKeypoints[j].pt.y << ")" << endl;
+			}
+		}
+	}
+}
+
+Mat createImageResult(const Mat& imageIni,
+		const vector<KeyPoint>& imageIniKeypoints, const Mat& newImage,
+		const vector<KeyPoint>& newImageKeypoints) {
+	Mat imageResult;
+	vector<DMatch> matches;
+	drawMatches(imageIni, imageIniKeypoints, newImage, newImageKeypoints,
+			matches, imageResult, Scalar::all(-1), Scalar::all(-1),
+			vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+	return imageResult;
 }
 
 void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints) {
 	vector<Point2f> obj;
 	vector<Point2f> scene;
-	int wordIni;
-	for (int i = 0; i < wordsImageIni.rows; ++i) {
-		wordIni = wordsImageIni.at<int>(i,0);
-		for (int j = 0; j < wordsNewImage.rows; ++j) {
-			if (wordIni==wordsNewImage.at<int>(j,0)) {
-				obj.push_back(imageIniKeypoints[i].pt);
-				scene.push_back(newImageKeypoints[j].pt);
-				cout << "Word: " << wordIni << " I1(X,Y): (" << imageIniKeypoints[i].pt.x << "," << imageIniKeypoints[i].pt.y << ") I2(X,Y): (" << newImageKeypoints[j].pt.x << "," << newImageKeypoints[j].pt.y << ")" << endl;
-			}
-		}
-	}
+
+	getPointsVectors(wordsImageIni, wordsNewImage, imageIniKeypoints, newImageKeypoints, obj, scene);
+
+	Mat imageResult = createImageResult(imageIni, imageIniKeypoints, newImage, newImageKeypoints);
 
 	// Find Homography
-	Mat H = findHomography(obj, scene, CV_RANSAC);
+	Mat transform = findHomography(obj, scene, CV_RANSAC);
 
-	// Get the corners from the image_1 ( the object to be "detected" )
 	vector<Point2f> objCorners = getCorners(imageIni);
-
-	// Transform perspective
 	vector<Point2f> sceneCorners(4);
-	perspectiveTransform(objCorners, sceneCorners, H);
 
-	Mat imageResult;
-	vector<DMatch> matches;
-	drawMatches(imageIni, imageIniKeypoints, newImage,newImageKeypoints, matches, imageResult, Scalar::all(-1),Scalar::all(-1), vector<char>(),DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);	drawImageLines(sceneCorners, imageIni, imageResult);
+	perspectiveTransform(objCorners, sceneCorners, transform);
+	drawImageLines(sceneCorners , imageIni, imageResult);
 
-	// Draw lines between the corners (the mapped object in the scene - image_2 )
-	drawImageLines(sceneCorners, newImage, imageResult);
-
-	// Show imageResult
 	imshow("Image result", imageResult);
 	waitKey(0);
 }
