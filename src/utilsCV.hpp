@@ -30,6 +30,7 @@ void findKCentersOnNewImage(Mat& matCenters, Mat& newImageDescriptors, int clust
 int votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImagesTotal);
 void showMatrixValues2(Mat& matrix, string s);
 void showMatrixValues3(vector<KeyPoint> keypoints, Mat& matrix,  string s);
+void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints);
 
 
 #endif /* UTILSCV_HPP_ */

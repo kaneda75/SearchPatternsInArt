@@ -19,62 +19,6 @@ const string vocabularyImagesNameFile = "/Users/xescriche/git/SearchPatternsInAr
 const string newImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/tapies1.jpg";
 const string dirToSaveResImages = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/results";
 
-
-// Get the corners from the image_1 ( the object to be "detected" )
-vector<Point2f> getCorners(const Mat& imageSelected) {
-	std::vector<Point2f> obj_corners(4);
-	obj_corners[0] = cvPoint(0, 0);
-	obj_corners[1] = cvPoint(imageSelected.cols, 0);
-	obj_corners[2] = cvPoint(imageSelected.cols, imageSelected.rows);
-	obj_corners[3] = cvPoint(0, imageSelected.rows);
-	return obj_corners;
-}
-
-// Draw lines between the corners (the mapped object in the scene - image_2 )
-void drawImageLines(const vector<Point2f>& scene_corners,Mat imageSelected, Mat& img_matches) {
-	line(img_matches, scene_corners[0] + Point2f(imageSelected.cols, 0),scene_corners[1] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
-	line(img_matches, scene_corners[1] + Point2f(imageSelected.cols, 0),scene_corners[2] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
-	line(img_matches, scene_corners[2] + Point2f(imageSelected.cols, 0),scene_corners[3] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
-	line(img_matches, scene_corners[3] + Point2f(imageSelected.cols, 0),scene_corners[0] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
-}
-
-void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints) {
-	vector<Point2f> obj;
-	vector<Point2f> scene;
-	int wordIni;
-	for (int i = 0; i < wordsImageIni.rows; ++i) {
-		wordIni = wordsImageIni.at<int>(i,0);
-		for (int j = 0; j < wordsNewImage.rows; ++j) {
-			if (wordIni==wordsNewImage.at<int>(j,0)) {
-				obj.push_back(imageIniKeypoints[i].pt);
-				scene.push_back(newImageKeypoints[j].pt);
-				cout << "Word: " << wordIni << " I1(X,Y): (" << imageIniKeypoints[i].pt.x << "," << imageIniKeypoints[i].pt.y << ") I2(X,Y): (" << newImageKeypoints[j].pt.x << "," << newImageKeypoints[j].pt.y << ")" << endl;
-			}
-		}
-	}
-
-	// Find Homography
-	Mat H = findHomography(obj, scene, CV_RANSAC);
-
-	// Get the corners from the image_1 ( the object to be "detected" )
-	vector<Point2f> objCorners = getCorners(imageIni);
-
-	// Transform perspective
-	vector<Point2f> sceneCorners(4);
-	perspectiveTransform(objCorners, sceneCorners, H);
-
-	Mat imageResult;
-	vector<DMatch> matches;
-	drawMatches(imageIni, imageIniKeypoints, newImage,newImageKeypoints, matches, imageResult, Scalar::all(-1),Scalar::all(-1), vector<char>(),DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);	drawImageLines(sceneCorners, imageIni, imageResult);
-
-	// Draw lines between the corners (the mapped object in the scene - image_2 )
-	drawImageLines(sceneCorners, newImage, imageResult);
-
-	// Show imageResult
-	imshow("Image result", imageResult);
-	waitKey(0);
-}
-
 void computeMatching() {
 	try {
 
