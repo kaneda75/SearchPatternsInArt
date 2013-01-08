@@ -10,10 +10,10 @@ int numImagesTotal = 0;
 
 // Directories, files
 const string vocabularyImagesNameFile = "/Users/xescriche/git/SearchPatternsInArt/tests/test2/vocabularyImages.txt";
-const string newImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/test2/tapies1.jpg";
+const string newImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/test2/tapies4.jpg";
 const string dirToSaveResImages = "/Users/xescriche/git/SearchPatternsInArt/tests/test2/results4";
 
-void searchPatterns(string algorithmType, int k, int criteriaKMeans, int attemptsKMeans, int minimumPointsOnVotes) {
+void searchPatterns(string algorithmType, int k, int kIncrement, int criteriaKMeans, int attemptsKMeans, int minimumPointsOnVotes, int thresholdDistanceAdmitted) {
 	try {
 
 		// POINT 1: DEFINE Feature detector (detectorType) AND Descriptor extractor (descriptorType)
@@ -51,12 +51,14 @@ void searchPatterns(string algorithmType, int k, int criteriaKMeans, int attempt
 		int numRowsTotal = calculeNumRowsTotal(imagesVectorDescriptors);
 		cout << "numRowsTotal: " << numRowsTotal << endl;
 
-		for (int clusterCount = k; clusterCount <= numRowsTotal; ++clusterCount) {
+		int clusterCount = k;
+		while (clusterCount < numRowsTotal) {
+//		for (int clusterCount = k; clusterCount <= numRowsTotal; ++clusterCount) {
 
 			vector<vector<int> > vocabulary(clusterCount, vector<int>(numImagesTotal));
 			Mat labels;
 			Mat centers;
-
+			cout << endl;
 			cout << "k: " << clusterCount << endl;
 			kmeansVocabularyImages(imagesVectorDescriptors, clusterCount, criteriaKMeans, attemptsKMeans, numImagesTotal, vocabulary, labels, centers, numRowsTotal);
 
@@ -81,30 +83,26 @@ void searchPatterns(string algorithmType, int k, int criteriaKMeans, int attempt
 			findKCentersOnNewImage(wordsNewImage, newImageDescriptors, centers);
 
 			// POINT 3.3: Voting images
-
 			Mat matVote = votingImages(vocabulary,wordsNewImage,numImagesTotal);
 			//		int mostVotedImage = getMostVotedImage(matVote);
 			for (int imag = 0; imag < matVote.rows; ++imag) {
 				if (matVote.at<int>(imag,0) >= minimumPointsOnVotes) {
-
+					cout << endl;
 					cout << "Image selected: " << imag << " with " << matVote.at<int>(imag,0) << " votes." << endl;
 					// POINT 4.1: RANSAC
-
 					Mat imageSelected = vocabularyImages[imag];
 					vector<KeyPoint> imageSelectedKeypoints = vocabularyImagesKeypoints[imag];
 					Mat imageSelectedDescriptors = imagesVectorDescriptors[imag];
 					Mat wordsImageIni(imageSelectedDescriptors.rows, 1, centers.type());
 					findKCentersOnNewImage(wordsImageIni, imageSelectedDescriptors, centers);
-
 					//		showMatrixValues3(imageSelectedKeypoints,wordsImageIni, "wordsImageIni:");
 					//		showMatrixValues3(newImageKeypoints, wordsNewImage, "wordsNewImage:");
 					//		showKeypointsImage(imageSelected, imageSelectedKeypoints);
 					//		showKeypointsImage(newImage, newImageKeypoints);
-
-					ransac(wordsImageIni, wordsNewImage, imageSelected, imageSelectedKeypoints, newImage, newImageKeypoints, clusterCount, dirToSaveResImages, imag);
-
+					ransac(wordsImageIni, wordsNewImage, imageSelected, imageSelectedKeypoints, newImage, newImageKeypoints, clusterCount, dirToSaveResImages, imag, thresholdDistanceAdmitted);
 				}
 			}
+			clusterCount = clusterCount + kIncrement;
 		}
 	} catch (exception& e) {
 		cout << e.what() << endl;
@@ -115,9 +113,11 @@ int main(int argc, char *argv[]) {
 
 	string algorithmType = "SIFT";
 	int k = 1; 						  // K const in k-means. This must be <= Total number of rows in the sum of all vocabulary images.
+	int kIncrement = 10;
 	int minimumPointsOnVotes = 10;    // This must be minimum 2. Homography needs 2 points minimum. 8-10 is a good value
 	int criteriaKMeans = 100;
 	int attemptsKMeans = 3;
+	int thresholdDistanceAdmitted = 3;  // threshold distance admitted
 
-	searchPatterns(algorithmType, k, criteriaKMeans, attemptsKMeans, minimumPointsOnVotes);
+	searchPatterns(algorithmType, k, kIncrement, criteriaKMeans, attemptsKMeans, minimumPointsOnVotes,thresholdDistanceAdmitted);
 }

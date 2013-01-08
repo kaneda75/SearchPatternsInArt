@@ -32,7 +32,7 @@ void showMatrixValues2(Mat& matrix, string s);
 void showMatrixValues3(vector<KeyPoint> keypoints, Mat& matrix,  string s);
 int calculeNumRowsTotal(const vector<Mat>& imagesVectorDescriptors);
 int getMostVotedImage(Mat matVote);
-void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints, int clusterCount, const string dirToSaveResImages, int imag);
+void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints, int clusterCount, const string dirToSaveResImages, int imag, int thresholdDistanceAdmitted);
 
 
 #endif /* UTILSCV_HPP_ */

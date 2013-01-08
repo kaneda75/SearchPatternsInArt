@@ -256,7 +256,7 @@ Mat votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImages
 			}
 		}
 	}
-	showMatrixValues2(matVote, "matVote:");
+//	showMatrixValues2(matVote, "matVote:");
 	return matVote;
 }
 
@@ -328,7 +328,62 @@ void saveImageResult(const string& dirToSaveResImages, int clusterCount,
 				<< dirToSaveResImages << "." << endl;
 }
 
-void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints, int clusterCount,const string dirToSaveResImages, int imag) {
+bool isGoodHomography(const vector<Point2f>& sceneCorners,
+		int thresholdDistanceAdmitted) {
+	bool goodHomography = true;
+	float diference = 0;
+	// Condition 1
+	diference = abs(sceneCorners[0].x - sceneCorners[3].x);
+	if (diference > thresholdDistanceAdmitted) {
+		goodHomography = false;
+	} else {
+		// Condition 2
+		diference = abs(sceneCorners[0].y - sceneCorners[1].y);
+		if (diference > thresholdDistanceAdmitted) {
+			goodHomography = false;
+		} else {
+			// Condition 3
+			diference = abs(sceneCorners[1].x - sceneCorners[2].x);
+			if (diference > thresholdDistanceAdmitted) {
+				goodHomography = false;
+			} else {
+				// Condition 4
+				diference = abs(sceneCorners[2].y - sceneCorners[3].y);
+				if (diference > thresholdDistanceAdmitted) {
+					goodHomography = false;
+				} else {
+					// Condition 5
+					if (sceneCorners[0].x >= sceneCorners[1].x
+							|| sceneCorners[0].x >= sceneCorners[2].x) {
+						goodHomography = false;
+					} else {
+						// Condition 6
+						if (sceneCorners[3].x >= sceneCorners[1].x
+								|| sceneCorners[3].x >= sceneCorners[2].x) {
+							goodHomography = false;
+						} else {
+							// Condition 7
+							if (sceneCorners[0].y >= sceneCorners[2].y
+									|| sceneCorners[0].y >= sceneCorners[3].y) {
+								goodHomography = false;
+							} else {
+								// Condition 8
+								if (sceneCorners[1].y >= sceneCorners[2].y
+										|| sceneCorners[1].y
+												>= sceneCorners[3].y) {
+									goodHomography = false;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return goodHomography;
+}
+
+void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints, int clusterCount,const string dirToSaveResImages, int imag, int thresholdDistanceAdmitted) {
 	vector<Point2f> obj;
 	vector<Point2f> scene;
 
@@ -365,7 +420,15 @@ void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,cons
 	vector<Point2f> sceneCorners(4);
 	perspectiveTransform(objCorners, sceneCorners, transform);
 
-	drawImageLines(sceneCorners , imageIni, imageResult);
-	saveImageResult(dirToSaveResImages, clusterCount, imag, imageResult);
+//	cout << "objCorners: " << endl;
+//	cout << objCorners << endl;
+//	cout << "sceneCorners: " << endl;
+//	cout << sceneCorners << endl;
+
+	bool goodHomography = isGoodHomography(sceneCorners, thresholdDistanceAdmitted);
+	if (goodHomography) {
+		drawImageLines(sceneCorners , imageIni, imageResult);
+		saveImageResult(dirToSaveResImages, clusterCount, imag, imageResult);
+	}
 }
 
