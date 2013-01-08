@@ -40,9 +40,6 @@ void searchPatterns(string algorithmType, int k, int kIncrement, int criteriaKMe
 		vector<vector<KeyPoint> > vocabularyImagesKeypoints;
 		detectKeypointsImagesVector(vocabularyImages, vocabularyImagesKeypoints, featureDetector);
 
-		// Show the keypoints on screen
-		//		 showKeypointsImagesVector(vocabularyImages, vocabularyImagesKeypoints);
-
 		vector<Mat> imagesVectorDescriptors;
 		computeDescriptorsImagesVector(vocabularyImages, vocabularyImagesKeypoints,imagesVectorDescriptors, descriptorExtractor);
 
