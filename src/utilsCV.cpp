@@ -41,7 +41,6 @@ bool readImagesFromFile(const string& imagesFilename,vector <Mat>& imagesVector,
 		return false;
 	} else {
 		numImagesTotal = readImageCount;
-//		cout << "Number of images from file:                        " << readImageCount << endl;
 	}
     return true;
 }
@@ -123,7 +122,6 @@ int calculeNumRowsTotal(const vector<Mat>& imagesVectorDescriptors) {
 
 void showVocabulary(int clusterCount, int numImagesTotal,
 		vector<vector<int> >& vocabulary) {
-	// Show vocabulary matrix
 	for (int i = 0; i < clusterCount; ++i) {
 		for (int j = 0; j < numImagesTotal; j++) {
 //			cout << "Vocabulary i: " << i << " j: " << j << " value: " << vocabulary[i][j] << endl;
@@ -138,16 +136,12 @@ void extractVocabulary(int clusterCount, int numImagesTotal, Mat src, const vect
 			vocabulary[i][j] = 0;
 		}
 	}
-//	cout << "\n" << "Centers:" << endl;
-	// i=> centers index
 	for (int i = 0; i < clusterCount; ++i) {
 		int jj = 0;
-		// x=> image index
 		for (int x = 0; x < numImagesTotal; x++) {
 			src = imagesVectorDescriptors[x];
 			for (int j = 0; j < src.rows; j++) {
 				if (labels.at<int>(0, jj) == i) {
-					// The image contains a k=i
 					vocabulary[i][x] = 1;
 				}
 				jj++;
@@ -190,9 +184,6 @@ void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clus
 	Mat src = imagesVectorDescriptors[0];
 	Mat samples = extractSamplesMap(imagesVectorDescriptors, numRowsTotal, numImagesTotal);
 	kmeans(samples, clusterCount, labels, TermCriteria(CV_TERMCRIT_ITER, criteriaKMeans, 1.0), attemptsKMeans, KMEANS_PP_CENTERS, centers);
-//	showMatrixValues2(labels, "labels:");
-//	showMatrixValues2(samples, "samples:");
-//	showMatrixValues2(centers, "centers:");
 	extractVocabulary(clusterCount, numImagesTotal, src, imagesVectorDescriptors, labels, vocabulary);
 }
 
@@ -221,8 +212,6 @@ void findKCentersOnNewImage(Mat& matCenters, Mat& newImageDescriptors, Mat& cent
 			}
 		}
 		matCenters.at<int>(var, 0) = position;
-//		showMatrixValues2(descriptor, "descriptor:");
-//		cout << "New Image Row: " << var << " KCenter: " << position << endl;
 	}
 }
 
@@ -236,7 +225,6 @@ int getMostVotedImage(Mat matVote) {
 			mostVotedImageValue = matVote.at<int>(var, 0);
 		}
 	}
-	//	cout << "Most voted image: " << mostVotedImage << " with " << mostVotedImageValue << " votes." << endl;
 	return mostVotedImage;
 }
 
@@ -256,7 +244,6 @@ Mat votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImages
 			}
 		}
 	}
-//	showMatrixValues2(matVote, "matVote:");
 	return matVote;
 }
 
@@ -288,7 +275,6 @@ void getPointsVectors(const Mat& wordsImageIni, const Mat& wordsNewImage,const v
 			if (wordIni == wordsNewImage.at<int>(j, 0)) {
 				obj.push_back(imageIniKeypoints[i].pt);
 				scene.push_back(newImageKeypoints[j].pt);
-//				cout << "Word: " << wordIni << " I1(X,Y): (" << imageIniKeypoints[i].pt.x << "," << imageIniKeypoints[i].pt.y << ") I2(X,Y): (" << newImageKeypoints[j].pt.x << "," << newImageKeypoints[j].pt.y << ")" << endl;
 			}
 		}
 	}
@@ -318,18 +304,15 @@ void dumpMatrix(const Mat &mat) {
      }
 }
 
-void saveImageResult(const string& dirToSaveResImages, int clusterCount,
-		int imag, const Mat& imageResult) {
+void saveImageResult(const string& dirToSaveResImages, int clusterCount, int imag, const Mat& imageResult) {
 	stringstream ss;
 	ss << dirToSaveResImages << "/k_" << clusterCount << "-" << imag << ".jpg";
 	string filename = ss.str();
 	if (!imwrite(filename, imageResult))
-		cout << "The file " << filename << " cannot be saved in "
-				<< dirToSaveResImages << "." << endl;
+		cout << "The file " << filename << " cannot be saved in " << dirToSaveResImages << "." << endl;
 }
 
-bool isGoodHomography(const vector<Point2f>& sceneCorners,
-		int thresholdDistanceAdmitted) {
+bool isGoodHomography(const vector<Point2f>& sceneCorners, int thresholdDistanceAdmitted) {
 	bool goodHomography = true;
 	float diference = 0;
 	// Condition 1
@@ -384,13 +367,10 @@ bool isGoodHomography(const vector<Point2f>& sceneCorners,
 }
 
 void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints, int clusterCount,const string dirToSaveResImages, int imag, int thresholdDistanceAdmitted) {
+
 	vector<Point2f> obj;
 	vector<Point2f> scene;
-
 	getPointsVectors(wordsImageIni, wordsNewImage, imageIniKeypoints, newImageKeypoints, obj, scene);
-
-//	cout << "obj.size():" << obj.size() << endl;
-//	cout << "scene.size():" << scene.size() << endl;
 
 	Mat imageResult = createImageResult(imageIni, imageIniKeypoints, newImage, newImageKeypoints);
 
@@ -419,12 +399,10 @@ void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,cons
 	vector<Point2f> objCorners = getCorners(imageIni);
 	vector<Point2f> sceneCorners(4);
 	perspectiveTransform(objCorners, sceneCorners, transform);
-
 //	cout << "objCorners: " << endl;
 //	cout << objCorners << endl;
 //	cout << "sceneCorners: " << endl;
 //	cout << sceneCorners << endl;
-
 	bool goodHomography = isGoodHomography(sceneCorners, thresholdDistanceAdmitted);
 	if (goodHomography) {
 		drawImageLines(sceneCorners , imageIni, imageResult);
