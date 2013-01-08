@@ -126,15 +126,12 @@ void showVocabulary(int clusterCount, int numImagesTotal,
 	// Show vocabulary matrix
 	for (int i = 0; i < clusterCount; ++i) {
 		for (int j = 0; j < numImagesTotal; j++) {
-			cout << "Vocabulary i: " << i << " j: " << j << " value: "
-					<< vocabulary[i][j] << endl;
+//			cout << "Vocabulary i: " << i << " j: " << j << " value: " << vocabulary[i][j] << endl;
 		}
 	}
 }
 
-void extractVocabulary(int clusterCount, int numImagesTotal, Mat centers,
-		Mat src, const vector<Mat>& imagesVectorDescriptors, Mat labels,
-		vector<vector<int> >& vocabulary) {
+void extractVocabulary(int clusterCount, int numImagesTotal, Mat src, const vector<Mat>& imagesVectorDescriptors, Mat labels, vector<vector<int> >& vocabulary) {
 	// First we put all values to 0
 	for (int i = 0; i < clusterCount; ++i) {
 		for (int j = 0; j < numImagesTotal; j++) {
@@ -189,21 +186,19 @@ void showMatrixValues3(vector<KeyPoint> keypoints, Mat& matrix,  string s) {
 }
 
 // POINT 2: APPLY KMEANS ON imagesVectorDescriptors
-void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount, int attempts,int numImagesTotal, vector<vector<int> >& vocabulary, Mat& labels, Mat& centers) {
+void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount,int criteriaKMeans, int attemptsKMeans,int numImagesTotal, vector<vector<int> >& vocabulary, Mat& labels, Mat& centers, int numRowsTotal) {
 	Mat src = imagesVectorDescriptors[0];
-	int numRowsTotal = calculeNumRowsTotal(imagesVectorDescriptors);
-	cout << "numRowsTotal: " << numRowsTotal << endl;
 	Mat samples = extractSamplesMap(imagesVectorDescriptors, numRowsTotal, numImagesTotal);
-	kmeans(samples, clusterCount, labels, TermCriteria(CV_TERMCRIT_ITER, 10, 1.0), attempts, KMEANS_PP_CENTERS, centers);
+	kmeans(samples, clusterCount, labels, TermCriteria(CV_TERMCRIT_ITER, criteriaKMeans, 1.0), attemptsKMeans, KMEANS_PP_CENTERS, centers);
 //	showMatrixValues2(labels, "labels:");
 //	showMatrixValues2(samples, "samples:");
 //	showMatrixValues2(centers, "centers:");
-	extractVocabulary(clusterCount, numImagesTotal, centers, src, imagesVectorDescriptors, labels, vocabulary);
+	extractVocabulary(clusterCount, numImagesTotal, src, imagesVectorDescriptors, labels, vocabulary);
 }
 
 
 // POINT 3.2: Find KCenters on newImageDescriptors
-void findKCentersOnNewImage(Mat& matCenters, Mat& newImageDescriptors, int clusterCount, int attempts, Mat& labels, Mat& centers) {
+void findKCentersOnNewImage(Mat& matCenters, Mat& newImageDescriptors, Mat& centers) {
 	for (int var = 0; var < newImageDescriptors.rows; ++var) {  //For each descriptor's new image
 		Mat descriptor = newImageDescriptors.row(var);
 		Mat matDifference(centers.rows, 1, centers.type());
@@ -231,7 +226,21 @@ void findKCentersOnNewImage(Mat& matCenters, Mat& newImageDescriptors, int clust
 	}
 }
 
-int votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImagesTotal) {
+// Calcule the most voted image
+int getMostVotedImage(Mat matVote) {
+	int mostVotedImage = 0;
+	int mostVotedImageValue = 0;
+	for (int var = 0; var < matVote.rows; ++var) {
+		if (matVote.at<int>(var, 0) > mostVotedImageValue) {
+			mostVotedImage = var;
+			mostVotedImageValue = matVote.at<int>(var, 0);
+		}
+	}
+	//	cout << "Most voted image: " << mostVotedImage << " with " << mostVotedImageValue << " votes." << endl;
+	return mostVotedImage;
+}
+
+Mat votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImagesTotal) {
 
 	Mat matVote(numImagesTotal, 1, matCenters.type());
 	// initialize matVote to 0
@@ -248,18 +257,7 @@ int votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImages
 		}
 	}
 	showMatrixValues2(matVote, "matVote:");
-
-	// Calcule the most voted image
-	int mostVotedImage = 0;
-	int mostVotedImageValue = 0;
-	for (int var = 0; var < matVote.rows; ++var) {
-		if (matVote.at<int>(var,0) > mostVotedImageValue) {
-			mostVotedImage = var;
-			mostVotedImageValue = matVote.at<int>(var,0);
-		}
-	}
-	cout << "Most voted image: " << mostVotedImage << " with " << mostVotedImageValue << " votes." << endl;
-	return mostVotedImage;
+	return matVote;
 }
 
 // Get the corners from the imageSelected ( the object to be "detected" )
@@ -290,45 +288,84 @@ void getPointsVectors(const Mat& wordsImageIni, const Mat& wordsNewImage,const v
 			if (wordIni == wordsNewImage.at<int>(j, 0)) {
 				obj.push_back(imageIniKeypoints[i].pt);
 				scene.push_back(newImageKeypoints[j].pt);
-				cout << "Word: " << wordIni << " I1(X,Y): ("
-						<< imageIniKeypoints[i].pt.x << ","
-						<< imageIniKeypoints[i].pt.y << ") I2(X,Y): ("
-						<< newImageKeypoints[j].pt.x << ","
-						<< newImageKeypoints[j].pt.y << ")" << endl;
+//				cout << "Word: " << wordIni << " I1(X,Y): (" << imageIniKeypoints[i].pt.x << "," << imageIniKeypoints[i].pt.y << ") I2(X,Y): (" << newImageKeypoints[j].pt.x << "," << newImageKeypoints[j].pt.y << ")" << endl;
 			}
 		}
 	}
 }
 
-Mat createImageResult(const Mat& imageIni,
-		const vector<KeyPoint>& imageIniKeypoints, const Mat& newImage,
-		const vector<KeyPoint>& newImageKeypoints) {
+Mat createImageResult(const Mat& imageIni, const vector<KeyPoint>& imageIniKeypoints, const Mat& newImage, const vector<KeyPoint>& newImageKeypoints) {
 	Mat imageResult;
 	vector<DMatch> matches;
-	drawMatches(imageIni, imageIniKeypoints, newImage, newImageKeypoints,
-			matches, imageResult, Scalar::all(-1), Scalar::all(-1),
-			vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
+	drawMatches(imageIni, imageIniKeypoints, newImage, newImageKeypoints, matches, imageResult, Scalar::all(-1), Scalar::all(-1), vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
 	return imageResult;
 }
 
-void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints) {
+void dumpMatrix(const Mat &mat) {
+     const int t = mat.type();
+     for (int i = 0; i < mat.rows; i++) {
+         for (int j = 0; j < mat.cols; j++) {
+             switch (t) {
+             case CV_32F:
+                 printf("%6.4f ", mat.at<float> (i, j));
+                 break;
+             case CV_64F:
+                 printf("%6.4f ", mat.at<double> (i, j));
+                 break;
+             }
+         }
+         printf("\n");
+     }
+}
+
+void saveImageResult(const string& dirToSaveResImages, int clusterCount,
+		int imag, const Mat& imageResult) {
+	stringstream ss;
+	ss << dirToSaveResImages << "/k_" << clusterCount << "-" << imag << ".jpg";
+	string filename = ss.str();
+	if (!imwrite(filename, imageResult))
+		cout << "The file " << filename << " cannot be saved in "
+				<< dirToSaveResImages << "." << endl;
+}
+
+void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints, int clusterCount,const string dirToSaveResImages, int imag) {
 	vector<Point2f> obj;
 	vector<Point2f> scene;
 
 	getPointsVectors(wordsImageIni, wordsNewImage, imageIniKeypoints, newImageKeypoints, obj, scene);
 
+//	cout << "obj.size():" << obj.size() << endl;
+//	cout << "scene.size():" << scene.size() << endl;
+
 	Mat imageResult = createImageResult(imageIni, imageIniKeypoints, newImage, newImageKeypoints);
 
 	// Find Homography
 	Mat transform = findHomography(obj, scene, CV_RANSAC);
+//	cout << "transform:" << endl;
+//	dumpMatrix(transform);
+//	cout << endl;
+
+//	double det = determinant(transform);
+//	cout << "determinant:" << det << endl;
+//	cout << endl;
+//
+//	Mat w, u, vt;
+//	SVD::compute(transform, w, u, vt);
+//	cout << "w:" << endl;
+//	dumpMatrix(w);
+//	cout << endl;
+//	cout << "u:" << endl;
+//	dumpMatrix(u);
+//	cout << endl;
+//	cout << "vt:" << endl;
+//	dumpMatrix(vt);
+//	cout << endl;
 
 	vector<Point2f> objCorners = getCorners(imageIni);
 	vector<Point2f> sceneCorners(4);
-
 	perspectiveTransform(objCorners, sceneCorners, transform);
-	drawImageLines(sceneCorners , imageIni, imageResult);
 
-	imshow("Image result", imageResult);
-	waitKey(0);
+	drawImageLines(sceneCorners , imageIni, imageResult);
+	saveImageResult(dirToSaveResImages, clusterCount, imag, imageResult);
 }
 

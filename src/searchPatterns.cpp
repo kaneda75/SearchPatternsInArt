@@ -5,38 +5,32 @@ using namespace cv;
 using namespace std;
 
 // Detectors, descriptors, loadImage
-const string detectorType = "SIFT";
-const string descriptorType = "SIFT";
 const int color = 0;
 int numImagesTotal = 0;
 
-// K-means
-const int clusterCount = 282;  // K const in k-means. This must be <= Total number of rows in the sum of all vocabulary images.
-const int attempts = 3;
-
 // Directories, files
 const string vocabularyImagesNameFile = "/Users/xescriche/git/SearchPatternsInArt/tests/test2/vocabularyImages.txt";
-const string newImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/test2/tapies9.jpg";
-const string dirToSaveResImages = "/Users/xescriche/git/SearchPatternsInArt/tests/test2/results";
+const string newImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/test2/tapies1.jpg";
+const string dirToSaveResImages = "/Users/xescriche/git/SearchPatternsInArt/tests/test2/results4";
 
-void computeMatching() {
+void searchPatterns(string algorithmType, int k, int criteriaKMeans, int attemptsKMeans, int minimumPointsOnVotes) {
 	try {
 
-	// POINT 1: DEFINE Feature detector (detectorType) AND Descriptor extractor (descriptorType)
+		// POINT 1: DEFINE Feature detector (detectorType) AND Descriptor extractor (descriptorType)
 
 		// Feature detector
 		Ptr<FeatureDetector> featureDetector;
-		featureDetector = FeatureDetector::create(detectorType);
+		featureDetector = FeatureDetector::create(algorithmType);
 		if (featureDetector.empty())
 			cout << "The detector cannot be created." << endl << ">" << endl;
 
 		// Descriptor extractor
 		Ptr<DescriptorExtractor> descriptorExtractor;
-		descriptorExtractor = DescriptorExtractor::create(descriptorType);
+		descriptorExtractor = DescriptorExtractor::create(algorithmType);
 		if (featureDetector.empty())
 			cout << "The descriptor cannot be created." << endl << ">" << endl;
 
-	// POINT 2.1: READ IMAGES, DETECT KEYPOINTS AND EXTRACT DESCRIPTORS ON "VOCABULARY IMAGES"
+		// POINT 2.1: READ IMAGES, DETECT KEYPOINTS AND EXTRACT DESCRIPTORS ON "VOCABULARY IMAGES"
 
 		vector<Mat> vocabularyImages;
 		vector<string> vocabularyImagesNames;
@@ -47,63 +41,83 @@ void computeMatching() {
 		detectKeypointsImagesVector(vocabularyImages, vocabularyImagesKeypoints, featureDetector);
 
 		// Show the keypoints on screen
-//		 showKeypointsImagesVector(vocabularyImages, vocabularyImagesKeypoints);
+		//		 showKeypointsImagesVector(vocabularyImages, vocabularyImagesKeypoints);
 
 		vector<Mat> imagesVectorDescriptors;
 		computeDescriptorsImagesVector(vocabularyImages, vocabularyImagesKeypoints,imagesVectorDescriptors, descriptorExtractor);
 
-	// POINT 2.2: KMEANS ON imagesVectorDescriptors
+		// POINT 2.2: KMEANS ON imagesVectorDescriptors
 
-		vector<vector<int> > vocabulary(clusterCount, vector<int>(numImagesTotal));
-		Mat labels;
-		Mat centers;
-		kmeansVocabularyImages(imagesVectorDescriptors, clusterCount, attempts, numImagesTotal, vocabulary, labels, centers);
+		int numRowsTotal = calculeNumRowsTotal(imagesVectorDescriptors);
+		cout << "numRowsTotal: " << numRowsTotal << endl;
 
-	// POINT 3.1: READ IMAGE, DETECT KEYPOINTS AND EXTRACT DESCRIPTORS ON "NEW IMAGE"
+		for (int clusterCount = k; clusterCount <= numRowsTotal; ++clusterCount) {
 
-		Mat newImage;
-		if (!readImage(newImageFileName,newImage,color))
-			cout << endl;
+			vector<vector<int> > vocabulary(clusterCount, vector<int>(numImagesTotal));
+			Mat labels;
+			Mat centers;
 
-		vector<KeyPoint> newImageKeypoints;
-		detectKeypointsImage(newImage, newImageKeypoints, featureDetector);
+			cout << "k: " << clusterCount << endl;
+			kmeansVocabularyImages(imagesVectorDescriptors, clusterCount, criteriaKMeans, attemptsKMeans, numImagesTotal, vocabulary, labels, centers, numRowsTotal);
 
-		// Show the keypoints on screen
-		// showKeypointsImage(newImage, newImageKeypoints);
+			// POINT 3.1: READ IMAGE, DETECT KEYPOINTS AND EXTRACT DESCRIPTORS ON "NEW IMAGE"
 
-		Mat newImageDescriptors;
-		computeDescriptorsImage(newImage, newImageKeypoints, newImageDescriptors, descriptorExtractor);
+			Mat newImage;
+			if (!readImage(newImageFileName,newImage,color))
+				cout << endl;
 
-	//  POINT 3.2: Find Words/KCenters on newImageDescriptors
+			vector<KeyPoint> newImageKeypoints;
+			detectKeypointsImage(newImage, newImageKeypoints, featureDetector);
 
-		Mat wordsNewImage(newImageDescriptors.rows, 1, centers.type());
-		findKCentersOnNewImage(wordsNewImage, newImageDescriptors, clusterCount, attempts, labels, centers);
+			// Show the keypoints on screen
+			// showKeypointsImage(newImage, newImageKeypoints);
 
-	// POINT 3.3: Voting images
+			Mat newImageDescriptors;
+			computeDescriptorsImage(newImage, newImageKeypoints, newImageDescriptors, descriptorExtractor);
 
-		int mostVotedImage = votingImages(vocabulary,wordsNewImage,numImagesTotal);
+			//  POINT 3.2: Find Words/KCenters on newImageDescriptors
 
-	// POINT 4.1: RANSAC
+			Mat wordsNewImage(newImageDescriptors.rows, 1, centers.type());
+			findKCentersOnNewImage(wordsNewImage, newImageDescriptors, centers);
 
-		Mat imageSelected = vocabularyImages[mostVotedImage];
-		vector<KeyPoint> imageSelectedKeypoints = vocabularyImagesKeypoints[mostVotedImage];
-		Mat imageSelectedDescriptors = imagesVectorDescriptors[mostVotedImage];
-		Mat wordsImageIni(imageSelectedDescriptors.rows, 1, centers.type());
+			// POINT 3.3: Voting images
 
-		findKCentersOnNewImage(wordsImageIni, imageSelectedDescriptors, clusterCount, attempts, labels, centers);
+			Mat matVote = votingImages(vocabulary,wordsNewImage,numImagesTotal);
+			//		int mostVotedImage = getMostVotedImage(matVote);
+			for (int imag = 0; imag < matVote.rows; ++imag) {
+				if (matVote.at<int>(imag,0) >= minimumPointsOnVotes) {
 
-//		showMatrixValues3(imageSelectedKeypoints,wordsImageIni, "wordsImageIni:");
-//		showMatrixValues3(newImageKeypoints, wordsNewImage, "wordsNewImage:");
-//		showKeypointsImage(imageSelected, imageSelectedKeypoints);
-//		showKeypointsImage(newImage, newImageKeypoints);
+					cout << "Image selected: " << imag << " with " << matVote.at<int>(imag,0) << " votes." << endl;
+					// POINT 4.1: RANSAC
 
-		ransac(wordsImageIni, wordsNewImage, imageSelected, imageSelectedKeypoints, newImage, newImageKeypoints);
+					Mat imageSelected = vocabularyImages[imag];
+					vector<KeyPoint> imageSelectedKeypoints = vocabularyImagesKeypoints[imag];
+					Mat imageSelectedDescriptors = imagesVectorDescriptors[imag];
+					Mat wordsImageIni(imageSelectedDescriptors.rows, 1, centers.type());
+					findKCentersOnNewImage(wordsImageIni, imageSelectedDescriptors, centers);
 
-   } catch (exception& e) {
+					//		showMatrixValues3(imageSelectedKeypoints,wordsImageIni, "wordsImageIni:");
+					//		showMatrixValues3(newImageKeypoints, wordsNewImage, "wordsNewImage:");
+					//		showKeypointsImage(imageSelected, imageSelectedKeypoints);
+					//		showKeypointsImage(newImage, newImageKeypoints);
+
+					ransac(wordsImageIni, wordsNewImage, imageSelected, imageSelectedKeypoints, newImage, newImageKeypoints, clusterCount, dirToSaveResImages, imag);
+
+				}
+			}
+		}
+	} catch (exception& e) {
 		cout << e.what() << endl;
 	}
 }
 
 int main(int argc, char *argv[]) {
-	computeMatching();
+
+	string algorithmType = "SIFT";
+	int k = 1; 						  // K const in k-means. This must be <= Total number of rows in the sum of all vocabulary images.
+	int minimumPointsOnVotes = 10;    // This must be minimum 2. Homography needs 2 points minimum. 8-10 is a good value
+	int criteriaKMeans = 100;
+	int attemptsKMeans = 3;
+
+	searchPatterns(algorithmType, k, criteriaKMeans, attemptsKMeans, minimumPointsOnVotes);
 }

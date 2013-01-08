@@ -25,12 +25,14 @@ void detectKeypointsImage(const Mat& image, vector<KeyPoint>& imageKeypoints, Pt
 void detectKeypointsImagesVector(const vector<Mat>& imagesVector, vector<vector<KeyPoint> >& imageKeypointsVector,Ptr<FeatureDetector>& featureDetector);
 void showKeypointsImagesVector(const vector<Mat>& vocabularyImages, const vector<vector<KeyPoint> >& vocabularyImagesKeypoints);
 void showKeypointsImage(const Mat& image, const vector<KeyPoint> & imageKeypoints);
-void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount, int attempts,int numImagesTotal, vector<vector<int> >& vocabulary, Mat& labels, Mat& centers);
-void findKCentersOnNewImage(Mat& matCenters, Mat& newImageDescriptors, int clusterCount, int attempts, Mat& labels, Mat& centers);
-int votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImagesTotal);
+void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount, int criteriaKMeans, int attemptsKMeans, int numImagesTotal, vector<vector<int> >& vocabulary, Mat& labels, Mat& centers, int numRowsTotal);
+void findKCentersOnNewImage(Mat& matCenters, Mat& newImageDescriptors, Mat& centers);
+Mat votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImagesTotal);
 void showMatrixValues2(Mat& matrix, string s);
 void showMatrixValues3(vector<KeyPoint> keypoints, Mat& matrix,  string s);
-void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints);
+int calculeNumRowsTotal(const vector<Mat>& imagesVectorDescriptors);
+int getMostVotedImage(Mat matVote);
+void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints, int clusterCount, const string dirToSaveResImages, int imag);
 
 
 #endif /* UTILSCV_HPP_ */
