@@ -12,3 +12,4 @@
 *.la
 *.a
 /Debug
+/tests
