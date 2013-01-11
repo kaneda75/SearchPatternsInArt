@@ -275,7 +275,24 @@ void drawImageLines(const vector<Point2f>& scene_corners,Mat imageSelected, Mat&
 
 }
 
-void getPointsVectors(const Mat& wordsImageIni, const Mat& wordsNewImage,const vector<KeyPoint>& imageIniKeypoints,const vector<KeyPoint>& newImageKeypoints, vector<Point2f>& obj, vector<Point2f>& scene) {
+void drawImageLines2(const vector<Point2f>& scene_corners,Mat imageSelected, Mat& imgResult, int color) {
+	if (color == 1) { // good result. Green color.
+		line(imgResult, scene_corners[0],scene_corners[1],Scalar(0, 255, 0), 4);
+		line(imgResult, scene_corners[1],scene_corners[2],Scalar(0, 255, 0), 4);
+		line(imgResult, scene_corners[2],scene_corners[3],Scalar(0, 255, 0), 4);
+		line(imgResult, scene_corners[3],scene_corners[0],Scalar(0, 255, 0), 4);
+	}
+
+	if (color == 0) { // bad result. Red color
+		line(imgResult, scene_corners[0] + Point2f(imageSelected.cols, 0),scene_corners[1] + Point2f(imageSelected.cols, 0),Scalar(0, 0, 255), 4);
+		line(imgResult, scene_corners[1] + Point2f(imageSelected.cols, 0),scene_corners[2] + Point2f(imageSelected.cols, 0),Scalar(0, 0, 255), 4);
+		line(imgResult, scene_corners[2] + Point2f(imageSelected.cols, 0),scene_corners[3] + Point2f(imageSelected.cols, 0),Scalar(0, 0, 255), 4);
+		line(imgResult, scene_corners[3] + Point2f(imageSelected.cols, 0),scene_corners[0] + Point2f(imageSelected.cols, 0),Scalar(0, 0, 255), 4);
+	}
+
+}
+
+void getPointsVectors(const Mat& wordsImageIni, const Mat& wordsNewImage,const vector<KeyPoint>& imageIniKeypoints,const vector<KeyPoint>& newImageKeypoints, vector<Point2f>& obj, vector<Point2f>& scene, vector <pair <int, int> >& aMatches) {
 	int wordIni;
 	for (int i = 0; i < wordsImageIni.rows; ++i) {
 		wordIni = wordsImageIni.at<int>(i, 0);
@@ -283,6 +300,7 @@ void getPointsVectors(const Mat& wordsImageIni, const Mat& wordsNewImage,const v
 			if (wordIni == wordsNewImage.at<int>(j, 0)) {
 				obj.push_back(imageIniKeypoints[i].pt);
 				scene.push_back(newImageKeypoints[j].pt);
+				aMatches.push_back(make_pair(i,j));
 			}
 		}
 	}
@@ -315,6 +333,14 @@ void dumpMatrix(const Mat &mat) {
 void saveImageResult(const string& dirToSaveResImages, int clusterCount, int imag, const Mat& imageResult) {
 	stringstream ss;
 	ss << dirToSaveResImages << "/k_" << clusterCount << "-" << imag << ".jpg";
+	string filename = ss.str();
+	if (!imwrite(filename, imageResult))
+		cout << "The file " << filename << " cannot be saved in " << dirToSaveResImages << "." << endl;
+}
+
+void saveImageResult2(const string& dirToSaveResImages, int clusterCount, const Mat& imageResult) {
+	stringstream ss;
+	ss << dirToSaveResImages << "/total_k_" << clusterCount  << ".jpg";
 	string filename = ss.str();
 	if (!imwrite(filename, imageResult))
 		cout << "The file " << filename << " cannot be saved in " << dirToSaveResImages << "." << endl;
@@ -374,50 +400,54 @@ bool isGoodHomography(const vector<Point2f>& sceneCorners, int thresholdDistance
 	return goodHomography;
 }
 
-void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints, int clusterCount,const string dirToSaveResImages, int imag, int thresholdDistanceAdmitted) {
 
+Mat createMatchers(Mat& pic1, Mat& pic2, const std::vector <cv::KeyPoint> &feats1, const std::vector <cv::KeyPoint> &feats2, vector <pair <int, int> > aMatches) {
+	vector <DMatch> matches;
+	Mat output;
+	matches.reserve((int)aMatches.size());
+	// fill aMatches manually - one entry is a pair consisting of
+	//      (index_in_img_1_feats, index_in_img_2_feats)
+
+
+	for (int i=0; i < (int)aMatches.size(); ++i)
+	    matches.push_back(DMatch(aMatches[i].first, aMatches[i].second, numeric_limits<float>::max()));
+
+	drawMatches(pic1, feats1, pic2, feats2, matches, output);
+	return output;
+
+}
+
+void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints, int clusterCount,const string dirToSaveResImages, int imag, int thresholdDistanceAdmitted, Mat imageResult) {
 	vector<Point2f> obj;
 	vector<Point2f> scene;
-	getPointsVectors(wordsImageIni, wordsNewImage, imageIniKeypoints, newImageKeypoints, obj, scene);
+	vector <pair <int, int> > aMatches;
+	getPointsVectors(wordsImageIni, wordsNewImage, imageIniKeypoints, newImageKeypoints, obj, scene,aMatches);
 	cout << "# Descriptors: " << imageIniKeypoints.size() << endl;
 	cout << "# Matches: " << obj.size() << endl;
 
 	if (obj.size() >= 4) {
-		Mat imageResult = createImageResult(imageIni, imageIniKeypoints, newImage, newImageKeypoints);
-
-		// Find Homography
+//		Mat imageResult2 = createImageResult(imageIni, imageIniKeypoints, newImage, newImageKeypoints);
+		Mat imageResult2 = createMatchers(imageIni,newImage,imageIniKeypoints,newImageKeypoints,aMatches);
 		Mat transform = findHomography(obj, scene, CV_RANSAC);
-		//	cout << "transform:" << endl;
-		//	dumpMatrix(transform);
-		//	cout << endl;
-
 		double det = determinant(transform);
 		cout << "# Determinant: " << det << endl;
-		//
-		//	Mat w, u, vt;
-		//	SVD::compute(transform, w, u, vt);
-		//	cout << "w:" << endl;
-		//	dumpMatrix(w);
-		//	cout << endl;
-		//	cout << "u:" << endl;
-		//	dumpMatrix(u);
-		//	cout << endl;
-		//	cout << "vt:" << endl;
-		//	dumpMatrix(vt);
-		//	cout << endl;
 
 		vector<Point2f> objCorners = getCorners(imageIni);
 		vector<Point2f> sceneCorners(4);
 		perspectiveTransform(objCorners, sceneCorners, transform);
+
 		bool goodHomography = isGoodHomography(sceneCorners, thresholdDistanceAdmitted);
 		if (goodHomography) {
 			cout << "GOOD HOMOGRAPHY " << endl;
-			drawImageLines(sceneCorners , imageIni, imageResult, 1);
+			drawImageLines(sceneCorners , imageIni, imageResult2, 1);
+			drawImageLines2(sceneCorners , imageIni, imageResult, 1);
 		} else {
-			drawImageLines(sceneCorners , imageIni, imageResult, 0);
+			drawImageLines(sceneCorners , imageIni, imageResult2, 0);
+			drawImageLines2(sceneCorners , imageIni, imageResult, 0);
 		}
 		cout << endl;
-		saveImageResult(dirToSaveResImages, clusterCount, imag, imageResult);
+		saveImageResult(dirToSaveResImages, clusterCount, imag, imageResult2);
+		saveImageResult2(dirToSaveResImages, clusterCount, imageResult);
 	}
 }
 

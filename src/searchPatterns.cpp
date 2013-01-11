@@ -103,6 +103,9 @@ void searchPatterns(string algorithmType, int hessianThresholdSURF, bool upright
 			// POINT 3.3: Voting images
 			Mat matVote = votingImages(vocabulary,wordsNewImage,numImagesTotal);
 			cout << endl;
+
+			Mat imageResult;
+			readImage(newImageFileName,imageResult,1);
 			for (int imag = 0; imag < matVote.rows; ++imag) {
 				if (matVote.at<int>(imag,0) >= minimumPointsOnVotes) {
 					cout << "Image selected: " << imag << " with " << matVote.at<int>(imag,0) << " votes." << endl;
@@ -112,7 +115,7 @@ void searchPatterns(string algorithmType, int hessianThresholdSURF, bool upright
 					Mat imageSelectedDescriptors = imagesVectorDescriptors[imag];
 					Mat wordsImageIni(imageSelectedDescriptors.rows, 1, centers.type());
 					findKCentersOnNewImage(wordsImageIni, imageSelectedDescriptors, centers);
-					ransac(wordsImageIni, wordsNewImage, imageSelected, imageSelectedKeypoints, newImage, newImageKeypoints, clusterCount, dirToSaveResImages, imag, thresholdDistanceAdmitted);
+					ransac(wordsImageIni, wordsNewImage, imageSelected, imageSelectedKeypoints, newImage, newImageKeypoints, clusterCount, dirToSaveResImages, imag, thresholdDistanceAdmitted, imageResult);
 				}
 			}
 			clusterCount = clusterCount + kIncrement;
@@ -130,7 +133,7 @@ int main(int argc, char *argv[]) {
 	bool uprightSURF = false;			// (Only for SURF). 0 means that detector computes orientation of each feature. 1 means that the orientation is not computed
 
 	// K-Means
-	int initialK = 1; 					// Initial K Center constant in k-means. This must be <= Total number of rows in the sum of all vocabulary images.
+	int initialK = 31; 					// Initial K Center constant in k-means. This must be <= Total number of rows in the sum of all vocabulary images.
 	int kIncrement = 10;				// This is the increment of the k centers in kmeans loop
 	int criteriaKMeans = 100;			// This is the maximum number of iterations in kmeans to recalcule the k-centers (Ex: 100 it's ok)
 	int attemptsKMeans = 3;				// This is the number of times the algorithm is executed using different initial labellings (Ex: 3 it's ok)
