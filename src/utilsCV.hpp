@@ -38,6 +38,7 @@ void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clus
 void findKCentersOnNewImage(Mat& matCenters, Mat& newImageDescriptors, Mat& centers);
 Mat votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImagesTotal);
 
+// Ransac
 void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints, int clusterCount, const string dirToSaveResImages, int imag, int thresholdDistanceAdmitted, Mat imageResult);
 
 
