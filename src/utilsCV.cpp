@@ -250,21 +250,29 @@ Mat votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImages
 // Get the corners from the imageSelected ( the object to be "detected" )
 vector<Point2f> getCorners(const Mat& imageSelected) {
 	vector<Point2f> obj_corners(4);
-
 	obj_corners[0] = cvPoint(0, 0);
 	obj_corners[1] = cvPoint(imageSelected.cols, 0);
 	obj_corners[2] = cvPoint(imageSelected.cols, imageSelected.rows);
 	obj_corners[3] = cvPoint(0, imageSelected.rows);
-
 	return obj_corners;
 }
 
 // Draw lines between the corners (the mapped object in the scene - image_2 )
-void drawImageLines(const vector<Point2f>& scene_corners,Mat imageSelected, Mat& imgResult) {
-	line(imgResult, scene_corners[0] + Point2f(imageSelected.cols, 0),scene_corners[1] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
-	line(imgResult, scene_corners[1] + Point2f(imageSelected.cols, 0),scene_corners[2] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
-	line(imgResult, scene_corners[2] + Point2f(imageSelected.cols, 0),scene_corners[3] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
-	line(imgResult, scene_corners[3] + Point2f(imageSelected.cols, 0),scene_corners[0] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
+void drawImageLines(const vector<Point2f>& scene_corners,Mat imageSelected, Mat& imgResult, int color) {
+	if (color == 1) { // good result. Green color.
+		line(imgResult, scene_corners[0] + Point2f(imageSelected.cols, 0),scene_corners[1] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
+		line(imgResult, scene_corners[1] + Point2f(imageSelected.cols, 0),scene_corners[2] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
+		line(imgResult, scene_corners[2] + Point2f(imageSelected.cols, 0),scene_corners[3] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
+		line(imgResult, scene_corners[3] + Point2f(imageSelected.cols, 0),scene_corners[0] + Point2f(imageSelected.cols, 0),Scalar(0, 255, 0), 4);
+	}
+
+	if (color == 0) { // bad result. Red color
+		line(imgResult, scene_corners[0] + Point2f(imageSelected.cols, 0),scene_corners[1] + Point2f(imageSelected.cols, 0),Scalar(0, 0, 255), 4);
+		line(imgResult, scene_corners[1] + Point2f(imageSelected.cols, 0),scene_corners[2] + Point2f(imageSelected.cols, 0),Scalar(0, 0, 255), 4);
+		line(imgResult, scene_corners[2] + Point2f(imageSelected.cols, 0),scene_corners[3] + Point2f(imageSelected.cols, 0),Scalar(0, 0, 255), 4);
+		line(imgResult, scene_corners[3] + Point2f(imageSelected.cols, 0),scene_corners[0] + Point2f(imageSelected.cols, 0),Scalar(0, 0, 255), 4);
+	}
+
 }
 
 void getPointsVectors(const Mat& wordsImageIni, const Mat& wordsNewImage,const vector<KeyPoint>& imageIniKeypoints,const vector<KeyPoint>& newImageKeypoints, vector<Point2f>& obj, vector<Point2f>& scene) {
@@ -371,41 +379,44 @@ void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,cons
 	vector<Point2f> obj;
 	vector<Point2f> scene;
 	getPointsVectors(wordsImageIni, wordsNewImage, imageIniKeypoints, newImageKeypoints, obj, scene);
+	cout << "# Descriptors: " << imageIniKeypoints.size() << endl;
+	cout << "# Matches: " << obj.size() << endl;
 
-	Mat imageResult = createImageResult(imageIni, imageIniKeypoints, newImage, newImageKeypoints);
+	if (obj.size() >= 4) {
+		Mat imageResult = createImageResult(imageIni, imageIniKeypoints, newImage, newImageKeypoints);
 
-	// Find Homography
-	Mat transform = findHomography(obj, scene, CV_RANSAC);
-//	cout << "transform:" << endl;
-//	dumpMatrix(transform);
-//	cout << endl;
+		// Find Homography
+		Mat transform = findHomography(obj, scene, CV_RANSAC);
+		//	cout << "transform:" << endl;
+		//	dumpMatrix(transform);
+		//	cout << endl;
 
-//	double det = determinant(transform);
-//	cout << "determinant:" << det << endl;
-//	cout << endl;
-//
-//	Mat w, u, vt;
-//	SVD::compute(transform, w, u, vt);
-//	cout << "w:" << endl;
-//	dumpMatrix(w);
-//	cout << endl;
-//	cout << "u:" << endl;
-//	dumpMatrix(u);
-//	cout << endl;
-//	cout << "vt:" << endl;
-//	dumpMatrix(vt);
-//	cout << endl;
+		double det = determinant(transform);
+		cout << "# Determinant: " << det << endl;
+		//
+		//	Mat w, u, vt;
+		//	SVD::compute(transform, w, u, vt);
+		//	cout << "w:" << endl;
+		//	dumpMatrix(w);
+		//	cout << endl;
+		//	cout << "u:" << endl;
+		//	dumpMatrix(u);
+		//	cout << endl;
+		//	cout << "vt:" << endl;
+		//	dumpMatrix(vt);
+		//	cout << endl;
 
-	vector<Point2f> objCorners = getCorners(imageIni);
-	vector<Point2f> sceneCorners(4);
-	perspectiveTransform(objCorners, sceneCorners, transform);
-//	cout << "objCorners: " << endl;
-//	cout << objCorners << endl;
-//	cout << "sceneCorners: " << endl;
-//	cout << sceneCorners << endl;
-	bool goodHomography = isGoodHomography(sceneCorners, thresholdDistanceAdmitted);
-	if (goodHomography) {
-		drawImageLines(sceneCorners , imageIni, imageResult);
+		vector<Point2f> objCorners = getCorners(imageIni);
+		vector<Point2f> sceneCorners(4);
+		perspectiveTransform(objCorners, sceneCorners, transform);
+		bool goodHomography = isGoodHomography(sceneCorners, thresholdDistanceAdmitted);
+		if (goodHomography) {
+			cout << "GOOD HOMOGRAPHY " << endl;
+			drawImageLines(sceneCorners , imageIni, imageResult, 1);
+		} else {
+			drawImageLines(sceneCorners , imageIni, imageResult, 0);
+		}
+		cout << endl;
 		saveImageResult(dirToSaveResImages, clusterCount, imag, imageResult);
 	}
 }
