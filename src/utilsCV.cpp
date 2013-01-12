@@ -10,6 +10,8 @@
 using namespace std;
 using namespace cv;
 
+// 1. IMAGES
+
 bool readImage(const string& imageName, Mat& image, int color) {
 	image = imread(imageName, color);
 	if (image.empty()) {
@@ -90,14 +92,25 @@ void createSurfDetector(int hessianThresholdSURF, bool uprightSURF, Ptr<FeatureD
 	featureDetector = surf;
 }
 
+int calculeNumRowsTotal(const vector<Mat>& imagesVectorDescriptors) {
+	int numRowsTotal = 0;
+	for (unsigned int i = 0; i < imagesVectorDescriptors.size(); i++)
+		numRowsTotal = numRowsTotal + imagesVectorDescriptors[i].rows;
+	return numRowsTotal;
+}
+
+
+
+
+// 2. KMEANS
 
 Mat extractSamplesMap(const vector<Mat>& imagesVectorDescriptors, int numRowsTotal, int numImagesTotal) {
 	Mat src = imagesVectorDescriptors[0];
 	Mat samples(numRowsTotal, src.cols, src.type());
 	int jj = 0;
-	for (int i = 0; i < numImagesTotal; i++) { // i IMAGE NUMBER
+	for (int i = 0; i < numImagesTotal; i++) {
 		src = imagesVectorDescriptors[i];
-		for (int j = 0; j < src.rows; j++) { // j ROWS
+		for (int j = 0; j < src.rows; j++) {
 			for (int x = 0; x < src.cols; x++)
 				samples.at<float>(jj, x) = src.at<float>(j, x);
 			jj++;
@@ -106,30 +119,10 @@ Mat extractSamplesMap(const vector<Mat>& imagesVectorDescriptors, int numRowsTot
 	return samples;
 }
 
-Mat addDescriptorToSamplesMap(Mat samples, Mat descriptor) {
-	Mat samples2(samples.rows+1, samples.cols, samples.type());
-	int i = 0;
-	for (i = 0; i < samples.rows; i++)
-		for (int j = 0; j < samples.cols; j++)
-			samples2.at<float>(i, j) = samples.at<float>(i, j);
-	i++;
-	for (int x = 0; x < descriptor.cols; x++)
-		samples2.at<float>(i, x) = descriptor.at<float>(0, x);
-	return samples2;
-}
-
-int calculeNumRowsTotal(const vector<Mat>& imagesVectorDescriptors) {
-	int numRowsTotal = 0;
-	for (unsigned int i = 0; i < imagesVectorDescriptors.size(); i++)
-		numRowsTotal = numRowsTotal + imagesVectorDescriptors[i].rows;
-	return numRowsTotal;
-}
-
 void extractVocabulary(int clusterCount, int numImagesTotal, Mat src, const vector<Mat>& imagesVectorDescriptors, Mat labels, vector<vector<int> >& vocabulary) {
-	// First we put all values to 0
 	for (int i = 0; i < clusterCount; ++i)
 		for (int j = 0; j < numImagesTotal; j++)
-			vocabulary[i][j] = 0;
+			vocabulary[i][j] = 0; // First we put all values to 0
 
 	for (int i = 0; i < clusterCount; ++i) {
 		int jj = 0;
@@ -144,7 +137,6 @@ void extractVocabulary(int clusterCount, int numImagesTotal, Mat src, const vect
 	}
 }
 
-//
 void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount,int criteriaKMeans, int attemptsKMeans,int numImagesTotal, vector<vector<int> >& vocabulary, Mat& centers, int numRowsTotal) {
 	Mat labels;
 	Mat src = imagesVectorDescriptors[0];
@@ -153,8 +145,6 @@ void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clus
 	extractVocabulary(clusterCount, numImagesTotal, src, imagesVectorDescriptors, labels, vocabulary);
 }
 
-
-// POINT 3.2: Find KCenters on newImageDescriptors
 void findKCentersOnNewImage(Mat& matCenters, Mat& newImageDescriptors, Mat& centers) {
 	for (int var = 0; var < newImageDescriptors.rows; ++var) {  //For each descriptor's new image
 		Mat descriptor = newImageDescriptors.row(var);
@@ -194,6 +184,14 @@ Mat votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImages
 	}
 	return matVote;
 }
+
+
+
+
+
+// 3. RANSAC
+
+
 
 // Get the corners from the imageSelected ( the object to be "detected" )
 vector<Point2f> getCorners(const Mat& imageSelected) {
@@ -237,19 +235,6 @@ void drawImageLinesOnlyResultImage(const vector<Point2f>& scene_corners,Mat imag
 	}
 }
 
-void getPointsVectors(const Mat& wordsImageIni, const Mat& wordsNewImage,const vector<KeyPoint>& imageIniKeypoints,const vector<KeyPoint>& newImageKeypoints, vector<Point2f>& obj, vector<Point2f>& scene, vector <pair <int, int> >& aMatches) {
-	int wordIni;
-	for (int i = 0; i < wordsImageIni.rows; ++i) {
-		wordIni = wordsImageIni.at<int>(i, 0);
-		for (int j = 0; j < wordsNewImage.rows; ++j)
-			if (wordIni == wordsNewImage.at<int>(j, 0)) {
-				obj.push_back(imageIniKeypoints[i].pt);
-				scene.push_back(newImageKeypoints[j].pt);
-				aMatches.push_back(make_pair(i,j));
-			}
-	}
-}
-
 void saveImageResult(const string& dirToSaveResImages, int clusterCount, int imag, const Mat& imageResult) {
 	stringstream ss;
 	ss << dirToSaveResImages << "/k_" << clusterCount << "-" << imag << ".jpg";
@@ -262,6 +247,20 @@ void saveImageResult2(const string& dirToSaveResImages, int clusterCount, const 
 	ss << dirToSaveResImages << "/total_k_" << clusterCount  << ".jpg";
 	string filename = ss.str();
 	if (!imwrite(filename, imageResult)) cout << "The file " << filename << " cannot be saved in " << dirToSaveResImages << "." << endl;
+}
+
+
+void getPointsVectors(const Mat& wordsImageIni, const Mat& wordsNewImage,const vector<KeyPoint>& imageIniKeypoints,const vector<KeyPoint>& newImageKeypoints, vector<Point2f>& obj, vector<Point2f>& scene, vector <pair <int, int> >& aMatches) {
+	int wordIni;
+	for (int i = 0; i < wordsImageIni.rows; ++i) {
+		wordIni = wordsImageIni.at<int>(i, 0);
+		for (int j = 0; j < wordsNewImage.rows; ++j)
+			if (wordIni == wordsNewImage.at<int>(j, 0)) {
+				obj.push_back(imageIniKeypoints[i].pt);
+				scene.push_back(newImageKeypoints[j].pt);
+				aMatches.push_back(make_pair(i,j));
+			}
+	}
 }
 
 bool isGoodHomography(const vector<Point2f>& sceneCorners, int thresholdDistanceAdmitted) {
@@ -304,7 +303,6 @@ Mat createMatchers(Mat& pic1, Mat& pic2, const std::vector <KeyPoint> &feats1, c
 	drawMatches(pic1, feats1, pic2, feats2, matches, output);
 	return output;
 }
-
 
 void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints, int clusterCount,const string dirToSaveResImages, int imag, int thresholdDistanceAdmitted, Mat imageResult) {
 	vector<Point2f> obj, scene;

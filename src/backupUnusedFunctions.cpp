@@ -62,6 +62,17 @@ void showMatrixValues3(vector<KeyPoint> keypoints, Mat& matrix,  string s) {
 	}
 }
 
+Mat addDescriptorToSamplesMap(Mat samples, Mat descriptor) {
+	Mat samples2(samples.rows+1, samples.cols, samples.type());
+	int i = 0;
+	for (i = 0; i < samples.rows; i++)
+		for (int j = 0; j < samples.cols; j++)
+			samples2.at<float>(i, j) = samples.at<float>(i, j);
+	i++;
+	for (int x = 0; x < descriptor.cols; x++)
+		samples2.at<float>(i, x) = descriptor.at<float>(0, x);
+	return samples2;
+}
 // Calcule the most voted image
 int getMostVotedImage(Mat matVote) {
 	int mostVotedImage = 0;

@@ -13,7 +13,7 @@ void searchPatterns(string algorithmType, int hessianThresholdSURF, bool upright
 	int numImagesTotal = 0;
 	try {
 
-	// POINT 1: DEFINE Feature detector (detectorType) AND Descriptor extractor (descriptorType)
+	// POINT 1.1: DEFINE Feature detector (detectorType) AND Descriptor extractor (descriptorType)
 
 		Ptr<FeatureDetector> featureDetector = FeatureDetector::create(algorithmType);
 		if (featureDetector.empty()) cout << "The detector cannot be created." << endl << ">" << endl;
@@ -24,7 +24,7 @@ void searchPatterns(string algorithmType, int hessianThresholdSURF, bool upright
 		if (algorithmType == "SURF")
 			createSurfDetector(hessianThresholdSURF, uprightSURF,featureDetector);
 
-	// POINT 2.1: READ IMAGES, DETECT KEYPOINTS AND EXTRACT DESCRIPTORS ON "VOCABULARY IMAGES"
+	// POINT 1.2: READ IMAGES, DETECT KEYPOINTS AND EXTRACT DESCRIPTORS ON "VOCABULARY IMAGES"
 
 		vector<Mat> vocabularyImages;
 		vector<string> vocabularyImagesNames;
@@ -39,7 +39,7 @@ void searchPatterns(string algorithmType, int hessianThresholdSURF, bool upright
 		int numRowsTotal = calculeNumRowsTotal(imagesVectorDescriptors);
 		cout << "Number of descriptors in vocabulary set: " << numRowsTotal << endl;
 
-	// POINT 2.2: READ IMAGE, APPLY EFFECTS, DETECT KEYPOINTS AND EXTRACT DESCRIPTORS ON "NEW IMAGE"
+	// POINT 1.3: READ IMAGE, APPLY EFFECTS, DETECT KEYPOINTS AND EXTRACT DESCRIPTORS ON "NEW IMAGE"
 
 		Mat newImage;
 		if (!readImage(newImageFileName,newImage,0)) cout << endl;
@@ -56,12 +56,12 @@ void searchPatterns(string algorithmType, int hessianThresholdSURF, bool upright
 		Mat newImageDescriptors;
 		computeDescriptorsImage(newImage, newImageKeypoints, newImageDescriptors, descriptorExtractor);
 
-	// POINT 3: K-MEANS
+	// POINT 2: K-MEANS
 
 		int clusterCount = k;
 		while (clusterCount <= numRowsTotal) {
 
-		// POINT 3.1: Apply KMeans on vocabulary (imagesVectorDescriptors)
+		// POINT 2.1: Apply KMeans on vocabulary (imagesVectorDescriptors)
 
 			vector<vector<int> > vocabulary(clusterCount, vector<int>(numImagesTotal));
 			Mat centers;
@@ -69,30 +69,30 @@ void searchPatterns(string algorithmType, int hessianThresholdSURF, bool upright
 			cout << "k: " << clusterCount << endl;
 			kmeansVocabularyImages(imagesVectorDescriptors, clusterCount, criteriaKMeans, attemptsKMeans, numImagesTotal, vocabulary, centers, numRowsTotal);
 
-		//  POINT 3.2: Find the KCenters on newImageDescriptors
+		//  POINT 2.2: Find the KCenters on newImageDescriptors
 
 			Mat kcentersNewImage(newImageDescriptors.rows, 1, centers.type());
 			findKCentersOnNewImage(kcentersNewImage, newImageDescriptors, centers);
 
-		// POINT 3.3: Voting images (Construct a Mat "matVote" with the labels/pattern that contains every image on vocabulary)
+		// POINT 2.3: Voting images (Construct a Mat "matVote" with the labels/pattern that contains every image on vocabulary)
 
 			Mat matVote = votingImages(vocabulary,kcentersNewImage,numImagesTotal);
 			cout << endl;
 
-	// POINT 4: RANSAC
+	// POINT 3: RANSAC
 
-			// POINT 4.1: Create a new imageResult. TODO: Create a copy of newImage without reading file again
+			// Create a new imageResult. TODO: Create a copy of newImage without reading file again
 
 			Mat imageResult;
 			readImage(newImageFileName,imageResult,1); // read the image in color to put the result on GREEN and RED
 
-			// POINT 4.2: For every voted image on vocabulary
+			// POINT 3.1: For every voted image on vocabulary, we select the images with >= "minimumPointsOnVotes" constant
 
 			for (int imag = 0; imag < matVote.rows; ++imag) {
 				if (matVote.at<int>(imag,0) >= minimumPointsOnVotes) {
 					cout << "Image selected: " << imag << " with " << matVote.at<int>(imag,0) << " votes." << endl;
 
-					// POINT 4.3: Select the image and find the KCenters
+					// POINT 3.2: Select the image and find the KCenters
 
 					Mat imageSelected = vocabularyImages[imag];
 					vector<KeyPoint> imageSelectedKeypoints = vocabularyImagesKeypoints[imag];
@@ -100,7 +100,7 @@ void searchPatterns(string algorithmType, int hessianThresholdSURF, bool upright
 					Mat kcentersImageSelected(imageSelectedDescriptors.rows, 1, centers.type());
 					findKCentersOnNewImage(kcentersImageSelected, imageSelectedDescriptors, centers);
 
-					// POINT 4.4: Apply RANSAC
+					// POINT 3.3: Apply RANSAC. Look for good/bad homographies. Save result images.
 
 					ransac(kcentersImageSelected, kcentersNewImage, imageSelected, imageSelectedKeypoints, newImage, newImageKeypoints, clusterCount, dirToSaveResImages, imag, thresholdDistanceAdmitted, imageResult);
 					cout << endl;
@@ -120,6 +120,10 @@ int main(int argc, char *argv[]) {
 	bool uprightSURF = false;			// (Only for SURF). This is USURF. false=detector computes orientation of each feature. true= the orientation is not computed.
 	int hessianThresholdSURF = 500;		// (Only for SURF). Threshold for the keypoint detector. A good default value could be from 300 to 500, depending from the image contrast.
 
+	// Image Effects (Gaussian Blur, resize)
+	int kernelSize = -1;				// This means the Gaussian kernel size applied to newImage. (-1: Not apply)
+	bool resizeImage = false;			// This means if we make a resize transformation of the image
+
 	// K-Means
 	int initialK = 1; 					// Initial K Center constant in k-means. This must be <= Total number of rows in the sum of all vocabulary images.
 	int kIncrement = 20;				// This is the increment of the k centers in kmeans loop
@@ -129,10 +133,6 @@ int main(int argc, char *argv[]) {
 	// RANSAC
 	int minimumPointsOnVotes = 10;    	// Minimum number of votes that must to have every image to be selected. (Minimum 2.Homography needs 2 points minimum) (Ex: 8-10 are good values)
 	int thresholdDistanceAdmitted = 10;	// Threshold distance admitted comparing distance between images on homography results.  (Ex: 3 it's ok)
-
-	// Gaussian Blur
-	int kernelSize = -1;				// This means the Gaussian kernel size applied to newImage. (-1: Not apply)
-	bool resizeImage = false;			// This means if we make a resize transformation of the image
 
 	searchPatterns(algorithmType, hessianThresholdSURF, uprightSURF, initialK, kIncrement, criteriaKMeans, attemptsKMeans, minimumPointsOnVotes,thresholdDistanceAdmitted, kernelSize, resizeImage);
 }
