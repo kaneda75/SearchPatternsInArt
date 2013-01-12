@@ -35,11 +35,10 @@ void computeDescriptorsImagesVector(const vector<Mat>& imagesVector, vector<vect
 
 // KMeans
 void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount, int criteriaKMeans, int attemptsKMeans, int numImagesTotal, vector<vector<int> >& vocabulary, Mat& centers, int numRowsTotal);
-void findKCentersOnNewImage(Mat& matCenters, Mat& newImageDescriptors, Mat& centers);
-Mat votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImagesTotal);
+void findKCentersOnImage(Mat& matKCenters, Mat& imageDescriptors, Mat& centers);
+Mat votingImages(vector<vector<int> >& labelsVocabularyStructure,Mat& kcentersQueryImage, int numImagesTotal);
 
 // Ransac
-void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints, int clusterCount, const string dirToSaveResImages, int imag, int thresholdDistanceAdmitted, Mat imageResult);
-
+void ransac(const Mat& kcentersImageSelected,const Mat& kcentersQueryImage, Mat imageSelected,const vector<KeyPoint>& imageSelectedKeypoints, Mat queryImage,const vector<KeyPoint>& queryImageKeypoints, int clusterCount,const string dirToSaveResImages, int imag, int thresholdDistanceAdmitted, Mat imageResult);
 
 #endif /* UTILSCV_HPP_ */

@@ -104,50 +104,49 @@ int calculeNumRowsTotal(const vector<Mat>& imagesVectorDescriptors) {
 
 // 2. KMEANS
 
-Mat extractSamplesMap(const vector<Mat>& imagesVectorDescriptors, int numRowsTotal, int numImagesTotal) {
+Mat extractAllVocabularyDescriptors(const vector<Mat>& imagesVectorDescriptors, int numRowsTotal, int numImagesTotal) {
 	Mat src = imagesVectorDescriptors[0];
-	Mat samples(numRowsTotal, src.cols, src.type());
+	Mat vocabularyDescriptors(numRowsTotal, src.cols, src.type());
 	int jj = 0;
 	for (int i = 0; i < numImagesTotal; i++) {
 		src = imagesVectorDescriptors[i];
 		for (int j = 0; j < src.rows; j++) {
 			for (int x = 0; x < src.cols; x++)
-				samples.at<float>(jj, x) = src.at<float>(j, x);
+				vocabularyDescriptors.at<float>(jj, x) = src.at<float>(j, x);
 			jj++;
 		}
 	}
-	return samples;
+	return vocabularyDescriptors;
 }
 
-void extractVocabulary(int clusterCount, int numImagesTotal, Mat src, const vector<Mat>& imagesVectorDescriptors, Mat labels, vector<vector<int> >& vocabulary) {
+void extractLabelsVocabularyStructure(int clusterCount, int numImagesTotal, const vector<Mat>& imagesVectorDescriptors, Mat labels, vector<vector<int> >& labelsVocabularyStructure) {
 	for (int i = 0; i < clusterCount; ++i)
 		for (int j = 0; j < numImagesTotal; j++)
-			vocabulary[i][j] = 0; // First we put all values to 0
+			labelsVocabularyStructure[i][j] = 0; // First we put all values to 0
 
 	for (int i = 0; i < clusterCount; ++i) {
 		int jj = 0;
 		for (int x = 0; x < numImagesTotal; x++) {
-			src = imagesVectorDescriptors[x];
+			Mat src = imagesVectorDescriptors[x];
 			for (int j = 0; j < src.rows; j++) {
 				if (labels.at<int>(0, jj) == i)
-					vocabulary[i][x] = 1;
+					labelsVocabularyStructure[i][x] = 1;
 				jj++;
 			}
 		}
 	}
 }
 
-void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount,int criteriaKMeans, int attemptsKMeans,int numImagesTotal, vector<vector<int> >& vocabulary, Mat& centers, int numRowsTotal) {
+void kmeansVocabularyImages(const vector<Mat>& imagesVectorDescriptors, int clusterCount,int criteriaKMeans, int attemptsKMeans,int numImagesTotal, vector<vector<int> >& labelsVocabularyStructure, Mat& centers, int numRowsTotal) {
+	Mat vocabularyDescriptors = extractAllVocabularyDescriptors(imagesVectorDescriptors, numRowsTotal, numImagesTotal);
 	Mat labels;
-	Mat src = imagesVectorDescriptors[0];
-	Mat samples = extractSamplesMap(imagesVectorDescriptors, numRowsTotal, numImagesTotal);
-	kmeans(samples, clusterCount, labels, TermCriteria(CV_TERMCRIT_ITER, criteriaKMeans, 1.0), attemptsKMeans, KMEANS_PP_CENTERS, centers);
-	extractVocabulary(clusterCount, numImagesTotal, src, imagesVectorDescriptors, labels, vocabulary);
+	kmeans(vocabularyDescriptors, clusterCount, labels, TermCriteria(CV_TERMCRIT_ITER, criteriaKMeans, 1.0), attemptsKMeans, KMEANS_PP_CENTERS, centers);
+	extractLabelsVocabularyStructure(clusterCount, numImagesTotal, imagesVectorDescriptors, labels, labelsVocabularyStructure);
 }
 
-void findKCentersOnNewImage(Mat& matCenters, Mat& newImageDescriptors, Mat& centers) {
-	for (int var = 0; var < newImageDescriptors.rows; ++var) {  //For each descriptor's new image
-		Mat descriptor = newImageDescriptors.row(var);
+void findKCentersOnImage(Mat& matKCenters, Mat& imageDescriptors, Mat& centers) {
+	for (int var = 0; var < imageDescriptors.rows; ++var) {  //For each descriptor's new image
+		Mat descriptor = imageDescriptors.row(var);
 		Mat matDifference(centers.rows, 1, centers.type());
 		for (int i = 0; i < centers.rows; ++i) {  // For each k center
 			float sumTotal = 0;
@@ -167,22 +166,22 @@ void findKCentersOnNewImage(Mat& matCenters, Mat& newImageDescriptors, Mat& cent
 				position = x;
 			}
 		}
-		matCenters.at<int>(var, 0) = position;
+		matKCenters.at<int>(var, 0) = position;
 	}
 }
 
-Mat votingImages(vector<vector<int> >& vocabulary,Mat& matCenters, int numImagesTotal) {
-	Mat matVote(numImagesTotal, 1, matCenters.type());
-	for (int i = 0; i < matVote.rows; ++i)
-		matVote.at<int>(i,0) = 0; 				 // initialize matVote to 0
+Mat votingImages(vector<vector<int> >& labelsVocabularyStructure,Mat& kcentersQueryImage, int numImagesTotal) {
+	Mat matVotes(numImagesTotal, 1, kcentersQueryImage.type());
+	for (int i = 0; i < matVotes.rows; ++i)
+		matVotes.at<int>(i,0) = 0; 				 // initialize matVote to 0
 
-	for (int i = 0; i < matCenters.rows; ++i) {  // For each matCenters row
-		int k = matCenters.at<int>(i,0);  		 // Get the kCenter value
+	for (int i = 0; i < kcentersQueryImage.rows; ++i) {
+		int k = kcentersQueryImage.at<int>(i,0);  		 // Get the kCenter value
 		for (int j = 0; j < numImagesTotal; ++j)
-			if (vocabulary[k][j] == 1)
-				matVote.at<int>(j,0) = matVote.at<int>(j,0) + 1;
+			if (labelsVocabularyStructure[k][j] == 1)
+				matVotes.at<int>(j,0) = matVotes.at<int>(j,0) + 1;
 	}
-	return matVote;
+	return matVotes;
 }
 
 
@@ -250,14 +249,14 @@ void saveImageResult2(const string& dirToSaveResImages, int clusterCount, const 
 }
 
 
-void getPointsVectors(const Mat& wordsImageIni, const Mat& wordsNewImage,const vector<KeyPoint>& imageIniKeypoints,const vector<KeyPoint>& newImageKeypoints, vector<Point2f>& obj, vector<Point2f>& scene, vector <pair <int, int> >& aMatches) {
+void getPointsVectors(const Mat& kcentersImageSelected, const Mat& kcentersQueryImage,const vector<KeyPoint>& imageSelectedKeypoints,const vector<KeyPoint>& queryImageKeypoints, vector<Point2f>& obj, vector<Point2f>& scene, vector <pair <int, int> >& aMatches) {
 	int wordIni;
-	for (int i = 0; i < wordsImageIni.rows; ++i) {
-		wordIni = wordsImageIni.at<int>(i, 0);
-		for (int j = 0; j < wordsNewImage.rows; ++j)
-			if (wordIni == wordsNewImage.at<int>(j, 0)) {
-				obj.push_back(imageIniKeypoints[i].pt);
-				scene.push_back(newImageKeypoints[j].pt);
+	for (int i = 0; i < kcentersImageSelected.rows; ++i) {
+		wordIni = kcentersImageSelected.at<int>(i, 0);
+		for (int j = 0; j < kcentersQueryImage.rows; ++j)
+			if (wordIni == kcentersQueryImage.at<int>(j, 0)) {
+				obj.push_back(imageSelectedKeypoints[i].pt);
+				scene.push_back(queryImageKeypoints[j].pt);
 				aMatches.push_back(make_pair(i,j));
 			}
 	}
@@ -296,42 +295,40 @@ Mat createMatchers(Mat& pic1, Mat& pic2, const std::vector <KeyPoint> &feats1, c
 	vector <DMatch> matches;
 	Mat output;
 	matches.reserve((int)aMatches.size());
-
 	for (int i=0; i < (int)aMatches.size(); ++i)
 	    matches.push_back(DMatch(aMatches[i].first, aMatches[i].second, numeric_limits<float>::max()));
-
 	drawMatches(pic1, feats1, pic2, feats2, matches, output);
 	return output;
 }
 
-void ransac(const Mat& wordsImageIni,const Mat& wordsNewImage, Mat imageIni,const vector<KeyPoint>& imageIniKeypoints, Mat newImage,const vector<KeyPoint>& newImageKeypoints, int clusterCount,const string dirToSaveResImages, int imag, int thresholdDistanceAdmitted, Mat imageResult) {
+void ransac(const Mat& kcentersImageSelected,const Mat& kcentersQueryImage, Mat imageSelected,const vector<KeyPoint>& imageSelectedKeypoints, Mat queryImage,const vector<KeyPoint>& queryImageKeypoints, int clusterCount,const string dirToSaveResImages, int imag, int thresholdDistanceAdmitted, Mat imageResult) {
 	vector<Point2f> obj, scene;
 	vector <pair <int, int> > aMatches;
-	getPointsVectors(wordsImageIni, wordsNewImage, imageIniKeypoints, newImageKeypoints, obj, scene,aMatches);
-	cout << "# Descriptors: " << imageIniKeypoints.size() << endl;
+	getPointsVectors(kcentersImageSelected, kcentersQueryImage, imageSelectedKeypoints, queryImageKeypoints, obj, scene, aMatches);
+	cout << "# Descriptors: " << imageSelectedKeypoints.size() << endl;
 	cout << "# Matches: " << obj.size() << endl;
 
 	if (obj.size() >= 4) {  // findHomography needs minimum 4 points
-		Mat imageResult2 = createMatchers(imageIni,newImage,imageIniKeypoints,newImageKeypoints,aMatches);
-		Mat transform = findHomography(obj, scene, CV_RANSAC);
-		double det = determinant(transform);
+		Mat imageResult2 = createMatchers(imageSelected,queryImage,imageSelectedKeypoints,queryImageKeypoints,aMatches);
+		Mat homography = findHomography(obj, scene, CV_RANSAC);
+		double det = determinant(homography);
 		cout << "# Determinant: " << det << endl;
 
-		vector<Point2f> objCorners = getCorners(imageIni);
+		vector<Point2f> objCorners = getCorners(imageSelected);
 		vector<Point2f> sceneCorners(4);
-		perspectiveTransform(objCorners, sceneCorners, transform);
+		perspectiveTransform(objCorners, sceneCorners, homography);
 
 		bool goodHomography = isGoodHomography(sceneCorners, thresholdDistanceAdmitted);
 		if (goodHomography) {
 			cout << "GOOD HOMOGRAPHY " << endl;
-			drawImageLines(sceneCorners , imageIni, imageResult2, 1);
-			drawImageLinesOnlyResultImage(sceneCorners , imageIni, imageResult, 1);
+			drawImageLines(sceneCorners , imageSelected, imageResult2, 1);
+			drawImageLinesOnlyResultImage(sceneCorners , imageSelected, imageResult, 1);
+			saveImageResult(dirToSaveResImages, clusterCount, imag, imageResult2);
+			saveImageResult2(dirToSaveResImages, clusterCount, imageResult);
 //		} else {
 //			This part paints bad homographies in red. For the moment it's not relevant
 //			drawImageLines(sceneCorners , imageIni, imageResult2, 0);
 //			drawImageLinesOnlyResultImage(sceneCorners , imageIni, imageResult, 0);
 		}
-		saveImageResult(dirToSaveResImages, clusterCount, imag, imageResult2);
-		saveImageResult2(dirToSaveResImages, clusterCount, imageResult);
 	}
 }

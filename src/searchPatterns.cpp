@@ -6,10 +6,10 @@ using namespace std;
 
 // Directories, files
 const string vocabularyImagesNameFile = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/vocabularyImages.txt";
-const string newImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/tapies1.jpg";
+const string queryImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/tapies1.jpg";
 const string dirToSaveResImages = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/results1";
 
-void searchPatterns(string algorithmType, int hessianThresholdSURF, bool uprightSURF, int k, int kIncrement, int criteriaKMeans, int attemptsKMeans, int minimumPointsOnVotes, int thresholdDistanceAdmitted, int kernelSize, bool resizeImage) {
+void searchPatterns(string algorithmType, int hessianThresholdSURF, bool uprightSURF, int k, int kIncrement, int criteriaKMeans, int attemptsKMeans, int minimumVotes, int thresholdDistanceAdmitted, int kernelSize, bool resizeImage) {
 	int numImagesTotal = 0;
 	try {
 
@@ -39,22 +39,22 @@ void searchPatterns(string algorithmType, int hessianThresholdSURF, bool upright
 		int numRowsTotal = calculeNumRowsTotal(imagesVectorDescriptors);
 		cout << "Number of descriptors in vocabulary set: " << numRowsTotal << endl;
 
-	// POINT 1.3: READ IMAGE, APPLY EFFECTS, DETECT KEYPOINTS AND EXTRACT DESCRIPTORS ON "NEW IMAGE"
+	// POINT 1.3: READ IMAGE, APPLY EFFECTS, DETECT KEYPOINTS AND EXTRACT DESCRIPTORS ON "QUERY IMAGE"
 
-		Mat newImage;
-		if (!readImage(newImageFileName,newImage,0)) cout << endl;
+		Mat queryImage;
+		if (!readImage(queryImageFileName,queryImage,0)) cout << endl;
 
 		if (kernelSize != -1)
-			applyGaussianBlur(newImage, kernelSize); // Gaussian Blur Effect
+			applyGaussianBlur(queryImage, kernelSize); // Gaussian Blur Effect
 
 		if (resizeImage)
-			applyResizeEffect(newImage);  // Resize Image Effect
+			applyResizeEffect(queryImage);  // Resize Image Effect
 
-		vector<KeyPoint> newImageKeypoints;
-		detectKeypointsImage(newImage, newImageKeypoints, featureDetector);
+		vector<KeyPoint> queryImageKeypoints;
+		detectKeypointsImage(queryImage, queryImageKeypoints, featureDetector);
 
-		Mat newImageDescriptors;
-		computeDescriptorsImage(newImage, newImageKeypoints, newImageDescriptors, descriptorExtractor);
+		Mat queryImageDescriptors;
+		computeDescriptorsImage(queryImage, queryImageKeypoints, queryImageDescriptors, descriptorExtractor);
 
 	// POINT 2: K-MEANS
 
@@ -63,20 +63,20 @@ void searchPatterns(string algorithmType, int hessianThresholdSURF, bool upright
 
 		// POINT 2.1: Apply KMeans on vocabulary (imagesVectorDescriptors)
 
-			vector<vector<int> > vocabulary(clusterCount, vector<int>(numImagesTotal));
+			vector<vector<int> > labelsVocabularyStructure(clusterCount, vector<int>(numImagesTotal));
 			Mat centers;
 			cout << endl;
 			cout << "k: " << clusterCount << endl;
-			kmeansVocabularyImages(imagesVectorDescriptors, clusterCount, criteriaKMeans, attemptsKMeans, numImagesTotal, vocabulary, centers, numRowsTotal);
+			kmeansVocabularyImages(imagesVectorDescriptors, clusterCount, criteriaKMeans, attemptsKMeans, numImagesTotal, labelsVocabularyStructure, centers, numRowsTotal);
 
-		//  POINT 2.2: Find the KCenters on newImageDescriptors
+		//  POINT 2.2: Find the KCenters on queryImageDescriptors
 
-			Mat kcentersNewImage(newImageDescriptors.rows, 1, centers.type());
-			findKCentersOnNewImage(kcentersNewImage, newImageDescriptors, centers);
+			Mat kcentersQueryImage(queryImageDescriptors.rows, 1, centers.type());
+			findKCentersOnImage(kcentersQueryImage, queryImageDescriptors, centers);
 
-		// POINT 2.3: Voting images (Construct a Mat "matVote" with the labels/pattern that contains every image on vocabulary)
+		// POINT 2.3: Voting images (Construct a Mat "matVote" with the number of labels/patterns that contains the query image in our vocabulary)
 
-			Mat matVote = votingImages(vocabulary,kcentersNewImage,numImagesTotal);
+			Mat matVote = votingImages(labelsVocabularyStructure,kcentersQueryImage,numImagesTotal);
 			cout << endl;
 
 	// POINT 3: RANSAC
@@ -84,12 +84,12 @@ void searchPatterns(string algorithmType, int hessianThresholdSURF, bool upright
 			// Create a new imageResult. TODO: Create a copy of newImage without reading file again
 
 			Mat imageResult;
-			readImage(newImageFileName,imageResult,1); // read the image in color to put the result on GREEN and RED
+			readImage(queryImageFileName,imageResult,1); // read the image in color to put the result on GREEN and RED
 
 			// POINT 3.1: For every voted image on vocabulary, we select the images with >= "minimumPointsOnVotes" constant
 
 			for (int imag = 0; imag < matVote.rows; ++imag) {
-				if (matVote.at<int>(imag,0) >= minimumPointsOnVotes) {
+				if (matVote.at<int>(imag,0) >= minimumVotes) {
 					cout << "Image selected: " << imag << " with " << matVote.at<int>(imag,0) << " votes." << endl;
 
 					// POINT 3.2: Select the image and find the KCenters
@@ -98,11 +98,11 @@ void searchPatterns(string algorithmType, int hessianThresholdSURF, bool upright
 					vector<KeyPoint> imageSelectedKeypoints = vocabularyImagesKeypoints[imag];
 					Mat imageSelectedDescriptors = imagesVectorDescriptors[imag];
 					Mat kcentersImageSelected(imageSelectedDescriptors.rows, 1, centers.type());
-					findKCentersOnNewImage(kcentersImageSelected, imageSelectedDescriptors, centers);
+					findKCentersOnImage(kcentersImageSelected, imageSelectedDescriptors, centers);
 
 					// POINT 3.3: Apply RANSAC. Look for good/bad homographies. Save result images.
 
-					ransac(kcentersImageSelected, kcentersNewImage, imageSelected, imageSelectedKeypoints, newImage, newImageKeypoints, clusterCount, dirToSaveResImages, imag, thresholdDistanceAdmitted, imageResult);
+					ransac(kcentersImageSelected, kcentersQueryImage, imageSelected, imageSelectedKeypoints, queryImage, queryImageKeypoints, clusterCount, dirToSaveResImages, imag, thresholdDistanceAdmitted, imageResult);
 					cout << endl;
 				}
 			}
@@ -131,8 +131,8 @@ int main(int argc, char *argv[]) {
 	int attemptsKMeans = 3;				// This is the number of times the algorithm is executed using different initial labellings (Ex: 3 it's ok)
 
 	// RANSAC
-	int minimumPointsOnVotes = 10;    	// Minimum number of votes that must to have every image to be selected. (Minimum 2.Homography needs 2 points minimum) (Ex: 8-10 are good values)
+	int minimumVotes = 10;    			// Minimum number of votes that must to have every image to be selected. (Minimum 2.Homography needs 2 points minimum) (Ex: 8-10 are good values)
 	int thresholdDistanceAdmitted = 10;	// Threshold distance admitted comparing distance between images on homography results.  (Ex: 3 it's ok)
 
-	searchPatterns(algorithmType, hessianThresholdSURF, uprightSURF, initialK, kIncrement, criteriaKMeans, attemptsKMeans, minimumPointsOnVotes,thresholdDistanceAdmitted, kernelSize, resizeImage);
+	searchPatterns(algorithmType, hessianThresholdSURF, uprightSURF, initialK, kIncrement, criteriaKMeans, attemptsKMeans, minimumVotes,thresholdDistanceAdmitted, kernelSize, resizeImage);
 }
