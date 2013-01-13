@@ -6,7 +6,7 @@ using namespace std;
 
 // Directories, files
 const string vocabularyImagesNameFile = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/vocabularyImages.txt";
-const string queryImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/tapies1.jpg";
+const string queryImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/tapies10.jpg";
 const string dirToSaveResImages = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/results1";
 
 void searchPatterns(string algorithmType, int hessianThresholdSURF, bool uprightSURF, int k, int kIncrement, int criteriaKMeans, int attemptsKMeans, int minimumVotes, int thresholdDistanceAdmitted, int kernelSize, bool resizeImage) {
@@ -126,13 +126,13 @@ int main(int argc, char *argv[]) {
 
 	// K-Means
 	int initialK = 1; 					// Initial K Center constant in k-means. This must be <= Total number of rows in the sum of all vocabulary images.
-	int kIncrement = 20;				// This is the increment of the k centers in kmeans loop
+	int kIncrement = 10;				// This is the increment of the k centers in kmeans loop
 	int criteriaKMeans = 200;			// This is the maximum number of iterations in kmeans to recalcule the k-centers (Ex: 100 it's ok)
 	int attemptsKMeans = 3;				// This is the number of times the algorithm is executed using different initial labellings (Ex: 3 it's ok)
 
 	// RANSAC
 	int minimumVotes = 10;    			// Minimum number of votes that must to have every image to be selected. (Minimum 2.Homography needs 2 points minimum) (Ex: 8-10 are good values)
-	int thresholdDistanceAdmitted = 10;	// Threshold distance admitted comparing distance between images on homography results.  (Ex: 3 it's ok)
+	int thresholdDistanceAdmitted = 20;	// Threshold distance admitted comparing distance between images on homography results.  (Ex: 3 it's ok)
 
 	searchPatterns(algorithmType, hessianThresholdSURF, uprightSURF, initialK, kIncrement, criteriaKMeans, attemptsKMeans, minimumVotes,thresholdDistanceAdmitted, kernelSize, resizeImage);
 }

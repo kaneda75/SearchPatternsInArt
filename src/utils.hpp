@@ -14,7 +14,6 @@
 #include <sstream>
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/features2d/features2d.hpp"
-#include "opencv2/contrib/contrib.hpp"
 
 using namespace std;
 using namespace cv;
