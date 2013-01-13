@@ -20,5 +20,6 @@ using namespace cv;
 
 void readVocabularyImages (const string& filename, string& dirName, vector<string>& vocabularyFiles);
 int leerLineaTxt(FILE *ftxt, char * linea);
+double RelDif(double a, double b);
 
 #endif

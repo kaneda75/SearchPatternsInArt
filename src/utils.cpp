@@ -45,3 +45,14 @@ int leerLineaTxt(FILE *ftxt, char * linea) {
 					|| (c == '\0')));
 	return (error);
 } /* f_leerLinea */
+
+
+#define Abs(x)    ((x) < 0 ? -(x) : (x))
+#define Max(a, b) ((a) > (b) ? (a) : (b))
+double RelDif(double a, double b)
+{
+	double c = Abs(a);
+	double d = Abs(b);
+	d = Max(c, d);
+	return d == 0.0 ? 0.0 : Abs(a - b) / d;
+}

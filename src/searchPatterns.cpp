@@ -5,9 +5,9 @@ using namespace cv;
 using namespace std;
 
 // Directories, files
-const string vocabularyImagesNameFile = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/vocabularyImages.txt";
-const string queryImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/tapies10.jpg";
-const string dirToSaveResImages = "/Users/xescriche/git/SearchPatternsInArt/tests/test1/results1";
+const string vocabularyImagesNameFile = "/Users/xescriche/git/SearchPatternsInArt/tests/exp1/test1-SIFT/vocabularyImages.txt";
+const string queryImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/exp1/test1-SIFT/tapies10.jpg";
+const string dirToSaveResImages = "/Users/xescriche/git/SearchPatternsInArt/tests/exp1/test1-SIFT/results10";
 
 void searchPatterns(string algorithmType, int hessianThresholdSURF, bool uprightSURF, int k, int kIncrement, int criteriaKMeans, int attemptsKMeans, int minimumVotes, int thresholdDistanceAdmitted, int kernelSize, bool resizeImage) {
 	int numImagesTotal = 0;
@@ -90,7 +90,7 @@ void searchPatterns(string algorithmType, int hessianThresholdSURF, bool upright
 
 			for (int imag = 0; imag < matVote.rows; ++imag) {
 				if (matVote.at<int>(imag,0) >= minimumVotes) {
-					cout << "Image selected: " << imag << " with " << matVote.at<int>(imag,0) << " votes." << endl;
+//					cout << "Image selected: " << imag << " with " << matVote.at<int>(imag,0) << " votes." << endl;
 
 					// POINT 3.2: Select the image and find the KCenters
 
@@ -103,7 +103,7 @@ void searchPatterns(string algorithmType, int hessianThresholdSURF, bool upright
 					// POINT 3.3: Apply RANSAC. Look for good/bad homographies. Save result images.
 
 					ransac(kcentersImageSelected, kcentersQueryImage, imageSelected, imageSelectedKeypoints, queryImage, queryImageKeypoints, clusterCount, dirToSaveResImages, imag, thresholdDistanceAdmitted, imageResult);
-					cout << endl;
+//					cout << endl;
 				}
 			}
 			clusterCount = clusterCount + kIncrement;
@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
 
 	// RANSAC
 	int minimumVotes = 10;    			// Minimum number of votes that must to have every image to be selected. (Minimum 2.Homography needs 2 points minimum) (Ex: 8-10 are good values)
-	int thresholdDistanceAdmitted = 20;	// Threshold distance admitted comparing distance between images on homography results.  (Ex: 3 it's ok)
+	int thresholdDistanceAdmitted = 30;	// Threshold distance admitted comparing distance between images on homography results.  (Ex: 30 it's ok)
 
 	searchPatterns(algorithmType, hessianThresholdSURF, uprightSURF, initialK, kIncrement, criteriaKMeans, attemptsKMeans, minimumVotes,thresholdDistanceAdmitted, kernelSize, resizeImage);
 }

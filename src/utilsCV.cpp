@@ -262,9 +262,12 @@ void getPointsVectors(const Mat& kcentersImageSelected, const Mat& kcentersQuery
 	}
 }
 
-bool isGoodHomography(const vector<Point2f>& sceneCorners, int thresholdDistanceAdmitted) {
+bool isGoodHomography(const vector<Point2f>& sceneCorners, int thresholdDistanceAdmitted, double det) {
 	bool goodHomography = true;
-
+	if (RelDif(det, 1) <= 0.1)
+			goodHomography = true;
+		else
+			goodHomography = false;
 	if (abs(sceneCorners[0].x - sceneCorners[3].x) > thresholdDistanceAdmitted)		// Condition 1
 		goodHomography = false;
 	else
@@ -305,22 +308,23 @@ void ransac(const Mat& kcentersImageSelected,const Mat& kcentersQueryImage, Mat 
 	vector<Point2f> obj, scene;
 	vector <pair <int, int> > aMatches;
 	getPointsVectors(kcentersImageSelected, kcentersQueryImage, imageSelectedKeypoints, queryImageKeypoints, obj, scene, aMatches);
-	cout << "# Descriptors: " << imageSelectedKeypoints.size() << endl;
-	cout << "# Matches: " << obj.size() << endl;
+//	cout << "# Descriptors: " << imageSelectedKeypoints.size() << endl;
+//	cout << "# Matches: " << obj.size() << endl;
 
 	if (obj.size() >= 4) {  // findHomography needs minimum 4 points
 		Mat imageResult2 = createMatchers(imageSelected,queryImage,imageSelectedKeypoints,queryImageKeypoints,aMatches);
 		Mat homography = findHomography(obj, scene, CV_RANSAC);
 		double det = determinant(homography);
-		cout << "# Determinant: " << det << endl;
+//		cout << "# Determinant: " << det << endl;
 
 		vector<Point2f> objCorners = getCorners(imageSelected);
 		vector<Point2f> sceneCorners(4);
 		perspectiveTransform(objCorners, sceneCorners, homography);
 
-		bool goodHomography = isGoodHomography(sceneCorners, thresholdDistanceAdmitted);
+		bool goodHomography = isGoodHomography(sceneCorners, thresholdDistanceAdmitted, det);
+
 		if (goodHomography) {
-			cout << "GOOD HOMOGRAPHY " << endl;
+			cout << "GOOD HOMOGRAPHY Image: " << imag << endl;
 			drawImageLines(sceneCorners , imageSelected, imageResult2, 1);
 			drawImageLinesOnlyResultImage(sceneCorners , imageSelected, imageResult, 1);
 			saveImageResult(dirToSaveResImages, clusterCount, imag, imageResult2);
