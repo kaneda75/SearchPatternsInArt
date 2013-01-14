@@ -5,9 +5,9 @@ using namespace cv;
 using namespace std;
 
 // Directories, files
-const string vocabularyImagesNameFile = "/Users/xescriche/git/SearchPatternsInArt/tests/exp1/test1-SIFT/vocabularyImages.txt";
-const string queryImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/exp1/test1-SIFT/tapies10.jpg";
-const string dirToSaveResImages = "/Users/xescriche/git/SearchPatternsInArt/tests/exp1/test1-SIFT/results10";
+const string vocabularyImagesNameFile = "/Users/xescriche/git/SearchPatternsInArt/tests/exp1/test1-SURF/vocabularyImages.txt";
+const string queryImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/exp1/test1-SURF/tapies3.jpg";
+const string dirToSaveResImages = "/Users/xescriche/git/SearchPatternsInArt/tests/exp1/test1-SURF/results3";
 
 void searchPatterns(string algorithmType, int hessianThresholdSURF, bool uprightSURF, int k, int kIncrement, int criteriaKMeans, int attemptsKMeans, int minimumVotes, int thresholdDistanceAdmitted, int kernelSize, bool resizeImage) {
 	int numImagesTotal = 0;
@@ -77,7 +77,7 @@ void searchPatterns(string algorithmType, int hessianThresholdSURF, bool upright
 		// POINT 2.3: Voting images (Construct a Mat "matVote" with the number of labels/patterns that contains the query image in our vocabulary)
 
 			Mat matVote = votingImages(labelsVocabularyStructure,kcentersQueryImage,numImagesTotal);
-			cout << endl;
+//			cout << endl;
 
 	// POINT 3: RANSAC
 
@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
 	// detector, descriptor types
 	string algorithmType = "SIFT";		// Detector and descriptor type (Ex: "SURF", "SIFT")
 	bool uprightSURF = false;			// (Only for SURF). This is USURF. false=detector computes orientation of each feature. true= the orientation is not computed.
-	int hessianThresholdSURF = 500;		// (Only for SURF). Threshold for the keypoint detector. A good default value could be from 300 to 500, depending from the image contrast.
+	int hessianThresholdSURF = 300;		// (Only for SURF). Threshold for the keypoint detector. A good default value could be from 300 to 500, depending from the image contrast.
 
 	// Image Effects (Gaussian Blur, resize)
 	int kernelSize = -1;				// This means the Gaussian kernel size applied to newImage. (-1: Not apply)
@@ -126,8 +126,8 @@ int main(int argc, char *argv[]) {
 
 	// K-Means
 	int initialK = 1; 					// Initial K Center constant in k-means. This must be <= Total number of rows in the sum of all vocabulary images.
-	int kIncrement = 10;				// This is the increment of the k centers in kmeans loop
-	int criteriaKMeans = 200;			// This is the maximum number of iterations in kmeans to recalcule the k-centers (Ex: 100 it's ok)
+	int kIncrement = 40;				// This is the increment of the k centers in kmeans loop
+	int criteriaKMeans = 100;			// This is the maximum number of iterations in kmeans to recalcule the k-centers (Ex: 100 it's ok)
 	int attemptsKMeans = 3;				// This is the number of times the algorithm is executed using different initial labellings (Ex: 3 it's ok)
 
 	// RANSAC

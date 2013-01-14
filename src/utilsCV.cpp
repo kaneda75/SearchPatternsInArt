@@ -304,35 +304,74 @@ Mat createMatchers(Mat& pic1, Mat& pic2, const std::vector <KeyPoint> &feats1, c
 	return output;
 }
 
+void removeInliers(vector<Point2f>& obj, vector<Point2f>& scene, const Mat& homography, vector<Point2f> sceneCorners,vector<Point2f>& obj2,vector<Point2f>& scene2) {
+	Point2f pXY0 = sceneCorners[0];
+	Point2f pXY1 = sceneCorners[1];
+	Point2f pXY2 = sceneCorners[2];
+	Point2f pXY3 = sceneCorners[3];
+	float Xmin,Xmax,Ymin,Ymax;
+
+	if (pXY0.x > pXY3.x) Xmin = pXY3.x; else Xmin = pXY0.x;
+	if (pXY0.y > pXY1.y) Ymin = pXY1.y; else Ymin = pXY0.y;
+	if (pXY1.x > pXY2.x) Xmax = pXY1.x; else Xmax = pXY2.x;
+	if (pXY2.y > pXY3.y) Ymax = pXY2.y; else Ymax = pXY3.y;
+
+	cout << "pXY0 " << pXY0 << endl;
+	cout << "pXY1 " << pXY1 << endl;
+	cout << "pXY2 " << pXY2 << endl;
+	cout << "pXY3 " << pXY3 << endl;
+	cout <<  endl;
+	cout << "Xmin " << Xmin << endl;
+	cout << "Ymin " << Ymin << endl;
+	cout << "Xmax " << Xmax << endl;
+	cout << "Ymax " << Ymax << endl;
+
+	for (unsigned int i = 0; i < obj.size(); ++i) {
+		if (scene.at(i).x >= Xmin && scene.at(i).x <= Xmax && scene.at(i).y >= Ymin && scene.at(i).y <= Ymax) {
+			cout << "i: " << i << " scene " << scene.at(i) << " Inlier " << endl;
+		} else {
+			cout << "i: " << i << " scene " << scene.at(i) << " Out " << endl;
+			obj2.push_back(obj.at(i));
+			scene2.push_back(scene.at(i));
+		}
+	}
+}
+
+void computeHomography(vector<Point2f>& obj, vector<Point2f>& scene, const Mat& imageSelected, int thresholdDistanceAdmitted, int imag, Mat& imageResult, Mat& imageResult2) {
+	if (obj.size() >= 4) {  // findHomography needs minimum 4 points
+		Mat homography = findHomography(obj, scene, CV_RANSAC);
+		double det = determinant(homography);
+		vector<Point2f> objCorners = getCorners(imageSelected);
+		vector<Point2f> sceneCorners(4);
+		perspectiveTransform(objCorners, sceneCorners, homography);
+		bool goodHomography = isGoodHomography(sceneCorners, thresholdDistanceAdmitted, det);
+		if (goodHomography) {
+			cout << "GOOD HOMOGRAPHY Image: " << imag << endl;
+			drawImageLinesOnlyResultImage(sceneCorners, imageSelected,imageResult, 1);
+			drawImageLines(sceneCorners, imageSelected, imageResult2, 1);
+			cout << "scene.size before: " << scene.size() << endl;
+			vector<Point2f> obj2, scene2;
+			removeInliers(obj, scene, homography, sceneCorners, obj2, scene2);
+			obj = obj2;
+			scene = scene2;
+			cout << "scene.size after: " << scene2.size() << endl;
+		}
+	}
+}
+
 void ransac(const Mat& kcentersImageSelected,const Mat& kcentersQueryImage, Mat imageSelected,const vector<KeyPoint>& imageSelectedKeypoints, Mat queryImage,const vector<KeyPoint>& queryImageKeypoints, int clusterCount,const string dirToSaveResImages, int imag, int thresholdDistanceAdmitted, Mat imageResult) {
 	vector<Point2f> obj, scene;
 	vector <pair <int, int> > aMatches;
 	getPointsVectors(kcentersImageSelected, kcentersQueryImage, imageSelectedKeypoints, queryImageKeypoints, obj, scene, aMatches);
-//	cout << "# Descriptors: " << imageSelectedKeypoints.size() << endl;
-//	cout << "# Matches: " << obj.size() << endl;
+	Mat imageResult2 = createMatchers(imageSelected,queryImage,imageSelectedKeypoints,queryImageKeypoints,aMatches);
 
-	if (obj.size() >= 4) {  // findHomography needs minimum 4 points
-		Mat imageResult2 = createMatchers(imageSelected,queryImage,imageSelectedKeypoints,queryImageKeypoints,aMatches);
-		Mat homography = findHomography(obj, scene, CV_RANSAC);
-		double det = determinant(homography);
-//		cout << "# Determinant: " << det << endl;
-
-		vector<Point2f> objCorners = getCorners(imageSelected);
-		vector<Point2f> sceneCorners(4);
-		perspectiveTransform(objCorners, sceneCorners, homography);
-
-		bool goodHomography = isGoodHomography(sceneCorners, thresholdDistanceAdmitted, det);
-
-		if (goodHomography) {
-			cout << "GOOD HOMOGRAPHY Image: " << imag << endl;
-			drawImageLines(sceneCorners , imageSelected, imageResult2, 1);
-			drawImageLinesOnlyResultImage(sceneCorners , imageSelected, imageResult, 1);
-			saveImageResult(dirToSaveResImages, clusterCount, imag, imageResult2);
-			saveImageResult2(dirToSaveResImages, clusterCount, imageResult);
-//		} else {
-//			This part paints bad homographies in red. For the moment it's not relevant
-//			drawImageLines(sceneCorners , imageIni, imageResult2, 0);
-//			drawImageLinesOnlyResultImage(sceneCorners , imageIni, imageResult, 0);
-		}
+	int attempts = 5;
+	while (scene.size() >= 4 && attempts > 0) {
+		computeHomography(obj, scene, imageSelected, thresholdDistanceAdmitted, imag, imageResult, imageResult2);
+		attempts = attempts - 1;
 	}
+
+	saveImageResult2(dirToSaveResImages, clusterCount, imageResult);
+	saveImageResult(dirToSaveResImages, clusterCount, imag, imageResult2);
+
 }

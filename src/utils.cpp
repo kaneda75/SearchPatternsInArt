@@ -56,3 +56,11 @@ double RelDif(double a, double b)
 	d = Max(c, d);
 	return d == 0.0 ? 0.0 : Abs(a - b) / d;
 }
+
+double RelDifFloats(float a, float b)
+{
+	float c = Abs(a);
+	float d = Abs(b);
+	d = Max(c, d);
+	return d == 0.0 ? 0.0 : Abs(a - b) / d;
+}
