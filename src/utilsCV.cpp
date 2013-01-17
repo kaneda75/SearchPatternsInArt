@@ -21,7 +21,7 @@ bool readImage(const string& imageName, Mat& image, int color) {
 	return true;
 }
 
-bool readImagesFromFile(const string& imagesFilename,vector <Mat>& imagesVector, vector<string>& imagesVectorNames, int & numImagesTotal) {
+bool readImagesFromFile(const string& imagesFilename,vector <Mat>& imagesVector, vector<string>& imagesVectorNames, int & numImagesTotal, int kernelSize) {
 	string trainDirName;
 	readVocabularyImages(imagesFilename, trainDirName, imagesVectorNames);
 	if (imagesVectorNames.empty()) {
@@ -47,20 +47,12 @@ bool readImagesFromFile(const string& imagesFilename,vector <Mat>& imagesVector,
     return true;
 }
 
-void applyGaussianBlur(Mat newImage, int kernelSize) {
-	Mat src, dst;
-	src = newImage;
-	GaussianBlur(src, dst, Size(kernelSize, kernelSize), 0, 0);
-	newImage = dst;
+void applyGaussianBlur(Mat queryImage, int kernelSize) {
+	GaussianBlur(queryImage, queryImage, Size(kernelSize, kernelSize), 0);
 }
 
-void applyResizeEffect(Mat newImage) {
-	Mat src, dst;
-	src = newImage;
-	resize(src, dst, Size(src.cols * 2, src.rows * 2));
-	src = dst;
-	resize(src, dst, Size(src.cols / 2, src.rows / 2));
-	newImage = dst;
+void applyResizeEffect(Mat& queryImage) {
+	resize(queryImage, queryImage, Size(queryImage.cols/2, queryImage.rows/2), 0.5,0.5, INTER_LINEAR);
 }
 
 void detectKeypointsImage(const Mat& image, vector<KeyPoint>& imageKeypoints, Ptr<FeatureDetector>& featureDetector) {
@@ -79,16 +71,15 @@ void computeDescriptorsImagesVector(const vector<Mat>& imagesVector, vector<vect
 	descriptorExtractor->compute(imagesVector, imagesVectorKeypointsVector, imagesVectorDescriptors);
 }
 
-void createSurfDetector(int hessianThresholdSURF, bool uprightSURF, Ptr<FeatureDetector> featureDetector) {
+void createSurfDetector(int hessianThresholdSURF, int nOctaves, int nOctaveLayers, bool extended, bool uprightSURF, Ptr<FeatureDetector> featureDetector) {
 	Ptr<Feature2D> surf = Algorithm::create<Feature2D>("Feature2D.SURF");
 	if (surf.empty())
 		CV_Error(CV_StsNotImplemented, "OpenCV was built without SURF support");
-
 	surf->set("hessianThreshold", hessianThresholdSURF);
-	surf->set("nOctaves", 4);
-	surf->set("nOctaveLayers", 2);
+	surf->set("nOctaves", nOctaves);
+	surf->set("nOctaveLayers", nOctaveLayers);
 	surf->set("upright", uprightSURF);
-	surf->set("extended", true);
+	surf->set("extended", extended);
 	featureDetector = surf;
 }
 
@@ -98,8 +89,6 @@ int calculeNumRowsTotal(const vector<Mat>& imagesVectorDescriptors) {
 		numRowsTotal = numRowsTotal + imagesVectorDescriptors[i].rows;
 	return numRowsTotal;
 }
-
-
 
 
 // 2. KMEANS
@@ -185,12 +174,7 @@ Mat votingImages(vector<vector<int> >& labelsVocabularyStructure,Mat& kcentersQu
 }
 
 
-
-
-
 // 3. RANSAC
-
-
 
 // Get the corners from the imageSelected ( the object to be "detected" )
 vector<Point2f> getCorners(const Mat& imageSelected) {
@@ -316,21 +300,9 @@ void removeInliers(vector<Point2f>& obj, vector<Point2f>& scene, const Mat& homo
 	if (pXY1.x > pXY2.x) Xmax = pXY1.x; else Xmax = pXY2.x;
 	if (pXY2.y > pXY3.y) Ymax = pXY2.y; else Ymax = pXY3.y;
 
-	cout << "pXY0 " << pXY0 << endl;
-	cout << "pXY1 " << pXY1 << endl;
-	cout << "pXY2 " << pXY2 << endl;
-	cout << "pXY3 " << pXY3 << endl;
-	cout <<  endl;
-	cout << "Xmin " << Xmin << endl;
-	cout << "Ymin " << Ymin << endl;
-	cout << "Xmax " << Xmax << endl;
-	cout << "Ymax " << Ymax << endl;
-
 	for (unsigned int i = 0; i < obj.size(); ++i) {
 		if (scene.at(i).x >= Xmin && scene.at(i).x <= Xmax && scene.at(i).y >= Ymin && scene.at(i).y <= Ymax) {
-			cout << "i: " << i << " scene " << scene.at(i) << " Inlier " << endl;
 		} else {
-			cout << "i: " << i << " scene " << scene.at(i) << " Out " << endl;
 			obj2.push_back(obj.at(i));
 			scene2.push_back(scene.at(i));
 		}
@@ -346,32 +318,27 @@ void computeHomography(vector<Point2f>& obj, vector<Point2f>& scene, const Mat& 
 		perspectiveTransform(objCorners, sceneCorners, homography);
 		bool goodHomography = isGoodHomography(sceneCorners, thresholdDistanceAdmitted, det);
 		if (goodHomography) {
-			cout << "GOOD HOMOGRAPHY Image: " << imag << endl;
+			cout << "GOOD HOMOGRAPHY on Image: " << imag << endl;
 			drawImageLinesOnlyResultImage(sceneCorners, imageSelected,imageResult, 1);
 			drawImageLines(sceneCorners, imageSelected, imageResult2, 1);
-			cout << "scene.size before: " << scene.size() << endl;
 			vector<Point2f> obj2, scene2;
 			removeInliers(obj, scene, homography, sceneCorners, obj2, scene2);
 			obj = obj2;
 			scene = scene2;
-			cout << "scene.size after: " << scene2.size() << endl;
 		}
 	}
 }
 
-void ransac(const Mat& kcentersImageSelected,const Mat& kcentersQueryImage, Mat imageSelected,const vector<KeyPoint>& imageSelectedKeypoints, Mat queryImage,const vector<KeyPoint>& queryImageKeypoints, int clusterCount,const string dirToSaveResImages, int imag, int thresholdDistanceAdmitted, Mat imageResult) {
+void ransac(const Mat& kcentersImageSelected,const Mat& kcentersQueryImage, Mat imageSelected,const vector<KeyPoint>& imageSelectedKeypoints, Mat queryImage,const vector<KeyPoint>& queryImageKeypoints, int clusterCount,const string dirToSaveResImages, int imag, int thresholdDistanceAdmitted, Mat imageResult, int homographyAttempts) {
 	vector<Point2f> obj, scene;
 	vector <pair <int, int> > aMatches;
 	getPointsVectors(kcentersImageSelected, kcentersQueryImage, imageSelectedKeypoints, queryImageKeypoints, obj, scene, aMatches);
 	Mat imageResult2 = createMatchers(imageSelected,queryImage,imageSelectedKeypoints,queryImageKeypoints,aMatches);
 
-	int attempts = 5;
-	while (scene.size() >= 4 && attempts > 0) {
+	while (scene.size() >= 4 && homographyAttempts > 0) {
 		computeHomography(obj, scene, imageSelected, thresholdDistanceAdmitted, imag, imageResult, imageResult2);
-		attempts = attempts - 1;
+		homographyAttempts = homographyAttempts - 1;
 	}
-
 	saveImageResult2(dirToSaveResImages, clusterCount, imageResult);
 	saveImageResult(dirToSaveResImages, clusterCount, imag, imageResult2);
-
 }

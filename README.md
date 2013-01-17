@@ -26,20 +26,33 @@ Usage
 
 Once you have downloaded the source code you have to define some CONSTANTS to run the application. These are defined in searchPatterns.cpp:
 
-  * **detectorType** (For example = "SIFT"):   The detector keypoints type. This can be FAST, STAR, SIFT, SURF, ORB, MSER, GFTT, HARRIS, Dense, SimpleBlob ... 
-http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_feature_detectors.html
-
-  * **descriptorType** (For example = "SIFT"):   The descriptror extractor type. This can be SIFT, SURF, ORB, BRIEF,... 
-http://opencv.willowgarage.com/documentation/cpp/features2d_common_interfaces_of_descriptor_extractors.html
-
-  * **color** (For example = 0):   This is the color mode at read images. 0) CV_LOAD_IMAGE_GRAYSCALE. http://opencv.willowgarage.com/documentation/c/reading_and_writing_images_and_video.html  
-
-  * **clusterCount** (For example = 282): This is the K constant used in k-means algorithm to define the number of k centers. This must be <= Total number of rows in the sum of all vocabulary images
   
-  * **attempts** (For example = 3):   This is the number of attempts that uses kmeans to recalcule the k centers
-  
+  * ** algorithmType** (For example = "SIFT"):   The detector keypoints and type. This can be FAST, STAR, SIFT, SURF, ORB, MSER, GFTT, HARRIS, Dense, SimpleBlob ... 
+
+Only for SURF algorithmType:
+  * ** uprightSURF** :   This is USURF. false=detector computes orientation of each feature. true= the orientation is not computed. 
+  * ** hessianThresholdSURF** :  Threshold for the keypoint detector. A good default value could be from 300 to 500, depending from the image contrast.
+  * ** nOctaves** : Number of pyramid octaves the keypoint detector will use.
+  * ** nOctaveLayers** :  Number of octave layers within each octave.
+  * ** extended** :  Extended descriptor flag (true - use extended 128-element descriptors; false - use 64-element descriptors).
+
+Image Effects (Gaussian Blur, resize):
+  * ** kernelSize** :  This means the Gaussian kernel size applied to newImage. (-1: Not apply)
+  * ** resizeImage** :  This means if we make a resize transformation of the image
+
+K-Means:
+  * ** initialK** : Initial K Center constant in k-means. This must be <= Total number of rows in the sum of all vocabulary images.
+  * ** kIncrement** :  This is the increment of the k centers in kmeans loop
+  * ** criteriaKMeans** :  This is the maximum number of iterations in kmeans to recalcule the k-centers (Ex: 100 it's ok)
+  * ** attemptsKMeans** :  This is the number of times the algorithm is executed using different initial labellings (Ex: 3 it's ok)
+
+RANSAC: 
+  * ** minimumVotes** :  Minimum number of votes that must to have every image to be selected. (Minimum 2.Homography needs 2 points minimum) (Ex: 8-10 are good values)
+  * ** thresholdDistanceAdmitted** :  Threshold distance admitted comparing distance between images on homography results.  (Ex: 30 it's ok)
+  * ** homographyAttempts** :  Number of RANSAC attempts to find homographies
+
+Directories, files:
   * **vocabularyImagesNameFile**  (For example = "/../vocabularyImages.txt") This .txt file contains the name of the learning image set Every image represents a "word" inside the "vocabulary" of learning image set
-  
   * **newImageFileName**  (For example = "/../tapies9.jpg"):   This is the new image that we want to compare with the learning image set
-  
   * **dirToSaveResImages**  (For example = "/../results"):  This is the route/directory of to save the result images
+
