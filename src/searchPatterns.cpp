@@ -6,8 +6,8 @@ using namespace std;
 
 // Directories, files
 const string vocabularyImagesNameFile = "/Users/xescriche/git/SearchPatternsInArt/tests/exp2/test1-SIFT/vocabularyImages.txt";
-const string queryImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/exp2/test1-SIFT/tapies7.jpg";
-const string dirToSaveResImages = "/Users/xescriche/git/SearchPatternsInArt/tests/exp2/test1-SIFT/results1";
+const string queryImageFileName = "/Users/xescriche/git/SearchPatternsInArt/tests/exp2/test1-SIFT/tapies1.jpg";
+const string dirToSaveResImages = "/Users/xescriche/git/SearchPatternsInArt/tests/exp2/test1-SIFT/results7";
 
 void searchPatterns(string algorithmType, int hessianThresholdSURF, int nOctaves, int nOctaveLayers, bool extended,  bool uprightSURF, int k, int kIncrement, int criteriaKMeans, int attemptsKMeans, int minimumVotes, int thresholdDistanceAdmitted, int kernelSize, bool resizeImage, int homographyAttempts) {
 	int numImagesTotal = 0;
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
 
 	// Image Effects (Gaussian Blur, resize)
 	int kernelSize = -1;				// This means the Gaussian kernel size applied to newImage. (-1: Not apply)
-	bool resizeImage = false;			// This means if we make a resize transformation of the image
+	bool resizeImage = true;			// This means if we make a resize transformation of the image
 
 	// K-Means
 	int initialK = 1; 					// Initial K Center constant in k-means. This must be <= Total number of rows in the sum of all vocabulary images.
@@ -121,8 +121,8 @@ int main(int argc, char *argv[]) {
 	int attemptsKMeans = 3;				// This is the number of times the algorithm is executed using different initial labellings (Ex: 3 it's ok)
 
 	// RANSAC
-	int minimumVotes = 10;    			// Minimum number of votes that must to have every image to be selected. (Minimum 2.Homography needs 2 points minimum) (Ex: 8-10 are good values)
-	int thresholdDistanceAdmitted = 30;	// Threshold distance admitted comparing distance between images on homography results.  (Ex: 30 it's ok)
+	int minimumVotes = 4;    			// Minimum number of votes that must to have every image to be selected. (Minimum 2.Homography needs 2 points minimum) (Ex: 8-10 are good values)
+	int thresholdDistanceAdmitted = 3;	// Threshold distance admitted comparing distance between images on homography results.  (Ex: 30 it's ok)
 	int homographyAttempts = 3;			// Number of RANSAC attempts to find homographies
 
 	searchPatterns(algorithmType, hessianThresholdSURF, nOctaves, nOctaveLayers, extended, uprightSURF, initialK, kIncrement, criteriaKMeans, attemptsKMeans, minimumVotes,thresholdDistanceAdmitted, kernelSize, resizeImage, homographyAttempts);

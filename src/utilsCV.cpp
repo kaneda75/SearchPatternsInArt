@@ -248,10 +248,10 @@ void getPointsVectors(const Mat& kcentersImageSelected, const Mat& kcentersQuery
 
 bool isGoodHomography(const vector<Point2f>& sceneCorners, int thresholdDistanceAdmitted, double det) {
 	bool goodHomography = true;
-	if (RelDif(det, 1) <= 0.1)
-			goodHomography = true;
-		else
-			goodHomography = false;
+//	if (RelDif(det, 1) <= 0.1)
+//			goodHomography = true;
+//		else
+//			goodHomography = false;
 	if (abs(sceneCorners[0].x - sceneCorners[3].x) > thresholdDistanceAdmitted)		// Condition 1
 		goodHomography = false;
 	else
